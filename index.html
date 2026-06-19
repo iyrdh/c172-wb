@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2c3e6b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="C172 W&B">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>C-172 Weight & Balance</title>
+<style>
+  :root{
+    --navy:#2c3e6b; --navy2:#212f54;
+    --ink:#16213a; --muted:#6b7280;
+    --good:#1b7f3b; --goodbg:#e7f6ec;
+    --bad:#c0392b;  --badbg:#fdecea;
+    --line:#dfe4ee; --field:#f4f6fa; --card:#fff;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#eef1f6; color:var(--ink); font-size:16px; line-height:1.35;
+    padding-bottom:calc(150px + var(--safe-b));
+  }
+  .wrap{ max-width:560px; margin:0 auto; }
+
+  /* App bar */
+  header{
+    position:sticky; top:0; z-index:30;
+    background:linear-gradient(160deg,var(--navy),var(--navy2));
+    color:#fff; padding:calc(12px + var(--safe-t)) 16px 12px;
+    box-shadow:0 2px 10px rgba(20,30,60,.18);
+  }
+  header .title{ font-size:18px; font-weight:700; letter-spacing:.3px; }
+  header .sub{ font-size:12px; opacity:.85; margin-top:2px; }
+
+  section{ background:var(--card); margin:10px; border-radius:14px; padding:14px 14px 6px;
+            box-shadow:0 1px 4px rgba(20,30,60,.06); }
+  .sechead{ font-size:12px; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+            color:var(--muted); margin:0 2px 10px; }
+
+  label.fld{ display:block; font-size:12px; color:var(--muted); margin:0 2px 4px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  input, select{
+    width:100%; font-size:16px; padding:11px 12px; border:1px solid #c4ccdb;
+    border-radius:10px; background:var(--field); color:var(--ink); font-family:inherit;
+    -webkit-appearance:none; appearance:none;
+  }
+  input:focus, select:focus{ outline:none; border-color:var(--navy); background:#fff;
+            box-shadow:0 0 0 3px rgba(44,62,107,.13); }
+  select{ font-weight:700; color:var(--navy);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%232c3e6b' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat; background-position:right 12px center; padding-right:36px; }
+  .field{ margin-bottom:12px; }
+
+  /* aircraft meta chips + category */
+  .chips{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:4px 2px 12px; }
+  .chip{ background:#eef1f6; color:var(--navy); border-radius:20px; padding:5px 12px;
+         font-size:13px; font-weight:700; }
+  .cat-toggle{ display:inline-flex; border:1px solid #c4ccdb; border-radius:10px; overflow:hidden; margin-left:auto; }
+  .cat-toggle button{ border:none; background:#fff; padding:8px 16px; font-size:14px;
+         font-weight:600; color:#444; font-family:inherit; }
+  .cat-toggle button.active{ background:var(--navy); color:#fff; }
+  .cat-toggle button:disabled{ color:#bcc3d2; background:#f4f6fa; }
+
+  /* loading cards */
+  .stn{ display:flex; align-items:center; gap:10px; padding:9px 2px; border-top:1px solid var(--line); }
+  .stn:first-of-type{ border-top:none; }
+  .stn .name{ flex:1; min-width:0; }
+  .stn .name b{ font-size:15px; font-weight:600; }
+  .stn .name small{ display:block; font-size:11px; color:var(--muted); }
+  .stn .wbox{ width:170px; flex:none; display:flex; gap:6px; }
+  .stn .wbox .u{ position:relative; flex:1; min-width:0; }
+  .stn .wbox input{ text-align:right; padding:11px 23px 11px 6px; font-weight:600; width:100%; }
+  .stn .wbox .unit{ position:absolute; right:6px; top:50%; transform:translateY(-50%);
+         font-size:10px; color:var(--muted); pointer-events:none; }
+  .stn .wbox input[readonly]{ background:#eef1f6; color:var(--ink); }
+  .stn .wbox.single{ width:120px; display:block; }
+  .stn .wbox.single .u{ flex:none; }
+  .detail{ font-size:11.5px; color:var(--muted); margin:-2px 2px 0; padding-left:2px; }
+  .detail .m{ color:#3a4a6b; font-weight:600; }
+
+  /* sticky result bar */
+  .resultbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    background:#fff; border-top:1px solid var(--line);
+    box-shadow:0 -4px 16px rgba(20,30,60,.12);
+    padding:10px 14px calc(10px + var(--safe-b));
+  }
+  .resultbar .row{ display:flex; align-items:center; gap:12px; }
+  .metric{ flex:1; text-align:center; }
+  .metric .k{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .metric .v{ font-size:21px; font-weight:800; line-height:1.1; }
+  .metric .v small{ font-size:12px; font-weight:600; color:var(--muted); }
+  .verdict{ flex:none; min-width:108px; text-align:center; border-radius:12px; padding:9px 8px;
+            font-weight:800; font-size:14px; }
+  .verdict.ok{ background:var(--goodbg); color:var(--good); }
+  .verdict.bad{ background:var(--badbg); color:var(--bad); }
+  .verdict.idle{ background:#eef1f6; color:var(--muted); font-weight:700; }
+  .verdict small{ display:block; font-size:10px; font-weight:600; }
+  .errlist{ margin:8px 2px 0; font-size:12.5px; color:var(--bad); }
+  .errlist li{ margin:3px 0; }
+  .errlist.hidden{ display:none; }
+
+  /* chart */
+  .chart-wrap{ text-align:center; }
+  .chart-wrap svg{ width:100%; height:auto; }
+  .legend{ font-size:11.5px; color:var(--muted); margin:2px 0 10px; }
+  .legend b.n{ color:var(--navy); } .legend b.u{ color:#7a5b00; }
+
+  .actions{ display:flex; gap:10px; margin:4px 2px 8px; }
+  .actions button{ flex:1; padding:11px; border-radius:10px; border:1px solid var(--navy);
+        background:#fff; color:var(--navy); font-weight:700; font-size:14px; font-family:inherit; }
+  .actions button.primary{ background:var(--navy); color:#fff; }
+  .foot{ font-size:11px; color:var(--muted); margin:8px 12px 4px; line-height:1.4; }
+  details.flight summary{ cursor:pointer; font-size:12px; font-weight:700; color:var(--muted);
+        text-transform:uppercase; letter-spacing:.6px; list-style:none; }
+  details.flight summary::-webkit-details-marker{ display:none; }
+  details.flight summary::after{ content:" ▸"; }
+  details.flight[open] summary::after{ content:" ▾"; }
+
+  /* ---- Wide screens / iPad landscape: two columns, no scrolling ---- */
+  @media (min-width:820px){
+    body{ padding-bottom:calc(96px + var(--safe-b)); }
+    .wrap{ max-width:1120px; }
+    .cols{ display:grid; grid-template-columns:1fr 1fr; gap:0; align-items:start; }
+    .colR{ position:sticky; top:calc(96px + var(--safe-t)); }
+    header .title{ font-size:22px; }
+    .stn .wbox{ width:210px; }
+    .stn .wbox.single{ width:130px; }
+    .stn .name b{ font-size:16px; }
+    /* roomier result bar centered to content width */
+    .resultbar .row{ max-width:1120px; margin:0 auto; }
+    .metric .v{ font-size:26px; }
+    .verdict{ min-width:150px; font-size:16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">C-172 Weight &amp; Balance</div>
+    <div class="sub">PIC must verify all data against the aircraft POH</div>
+  </header>
+
+  <div class="cols">
+  <div class="colL">
+  <!-- Aircraft -->
+  <section>
+    <div class="sechead">Aircraft</div>
+    <div class="field">
+      <label class="fld">A/C Registration</label>
+      <select id="m_reg" onchange="onRegChange()"><option value="">— select aircraft —</option></select>
+    </div>
+    <div class="chips">
+      <span class="chip" id="chipType">Type —</span>
+      <span class="chip" id="chipHp">— HP</span>
+      <div class="cat-toggle">
+        <button id="btnNormal" class="active" onclick="setCategory('normal')">Normal</button>
+        <button id="btnUtility" onclick="setCategory('utility')">Utility</button>
+      </div>
+    </div>
+    <details class="flight">
+      <summary>Flight details</summary>
+      <div class="grid2" style="margin-top:10px;">
+        <div class="field"><label class="fld">Date</label><input type="date" id="m_date"></div>
+        <div class="field"><label class="fld">Sortie No</label><input type="text" id="m_sortie"></div>
+      </div>
+      <div class="field"><label class="fld">Mission No</label><input type="text" id="m_mission"></div>
+    </details>
+  </section>
+
+  <!-- Loading -->
+  <section>
+    <div class="sechead">Loading</div>
+    <div id="stations"></div>
+  </section>
+  </div><!-- /colL -->
+
+  <div class="colR">
+  <!-- Chart -->
+  <section>
+    <div class="sechead" id="chartHead">Envelope</div>
+    <div class="chart-wrap">
+      <svg id="chart" viewBox="0 0 760 620" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="legend"><b class="n">▦ Normal</b> &nbsp;·&nbsp; <b class="u">▦ Utility</b> &nbsp;·&nbsp; ● your loading</div>
+    </div>
+    <div class="actions">
+      <button onclick="resetForm()">Reset</button>
+      <button class="primary" onclick="window.print()">Print / Save PDF</button>
+    </div>
+    <p class="foot">
+      Standard arms (POH): front 37.0″, rear 73.0″, bag&nbsp;1 95.0″, bag&nbsp;2 123.0″, fuel 48.0″. Fuel @ 6 lb/gal.
+      Max gross — C-172S 2550/2200 lb (180 HP); C-172R 2450/2100 lb (160 HP). Aid only — verify against the POH.
+    </p>
+  </section>
+  </div><!-- /colR -->
+  </div><!-- /cols -->
+</div>
+
+<!-- Sticky results -->
+<div class="resultbar">
+  <div class="row">
+    <div class="metric"><div class="k">Gross Wt</div><div class="v"><span id="r_wt">0</span> <small>lb</small></div></div>
+    <div class="metric"><div class="k">C.G.</div><div class="v"><span id="r_cg">—</span> <small>in</small></div></div>
+    <div class="verdict idle" id="r_verdict" onclick="toggleErrors()">SELECT A/C</div>
+  </div>
+  <ul class="errlist hidden" id="r_errs"></ul>
+</div>
+
+<script>
+/* ---------- Aircraft empty weights & arms ---------- */
+const AIRCRAFT = {
+  "HS-BAI": { type:"C172R", normal:{w:1678,   arm:40.61} },
+  "HS-BAO": { type:"C172R", normal:{w:1701.5, arm:41.08} },
+  "HS-BAP": { normal:{w:1705,   arm:40.79}, utility:{w:1605,   arm:39.73} },
+  "HS-BCB": { normal:{w:1636.5, arm:38.5 } },
+  "HS-BCC": { normal:{w:1719,   arm:41.8 } },
+  "HS-BCF": { normal:{w:1664,   arm:40.72}, utility:{w:1610,   arm:39.34} },
+  "HS-BCG": { normal:{w:1625,   arm:41.1 } },
+  "HS-BCI": { normal:{w:1622,   arm:37.97} },
+  "HS-BCJ": { normal:{w:1671,   arm:39.56} },
+  "HS-BCK": { normal:{w:1713,   arm:41.96}, utility:{w:1656.5, arm:42.21} },
+  "HS-BCO": { normal:{w:1694.5, arm:41.17}, utility:{w:1639.5, arm:39.47} },
+  "HS-BCP": { normal:{w:1689,   arm:40.76} },
+  "HS-BCQ": { normal:{w:1712,   arm:41.79} },
+  "HS-BCR": { normal:{w:1693,   arm:42.13} },
+  "HS-BCT": { normal:{w:1722,   arm:40.92} },
+  "HS-BCU": { normal:{w:1744.5, arm:41.64}, utility:{w:1727,   arm:40.35} },
+  "HS-BCW": { normal:{w:1677,   arm:40.04} },
+  "HS-BCX": { normal:{w:1759,   arm:42.29} },
+  "HS-BSR": { normal:{w:1690,   arm:41.2 } },
+  "HS-BSS": { normal:{w:1692.5, arm:41.29} },
+  "HS-BSU": { normal:{w:1699.5, arm:40.43} },
+  "HS-BSV": { normal:{w:1688.5, arm:40.56} },
+};
+
+const TYPE_SPEC = {
+  "C172S": { hp:180, maxW:{normal:2550, utility:2200},
+    envelope:{ normal:[[35,1500],[35,1950],[41,2550],[47.3,2550],[47.3,1500]],
+               utility:[[35,1500],[35,1950],[37.5,2200],[40.5,2200],[40.5,1500]] } },
+  "C172R": { hp:160, maxW:{normal:2450, utility:2100},
+    envelope:{ normal:[[35,1500],[35,1950],[40,2450],[47.3,2450],[47.3,1500]],
+               utility:[[35,1500],[35,1950],[36.5,2100],[40.5,2100],[40.5,1500]] } },
+};
+
+const LB_PER_KG=2.20462262, FUEL_LB_PER_GAL=6, FUEL_MAX_GAL=53;
+const STATIONS=[
+  {id:"bew",  name:"Basic Empty Wt", sub:"from aircraft", arm:0, locked:true},
+  {id:"pilot",name:"Pilot",          sub:"front 37.0″", arm:37},
+  {id:"copil",name:"Co-Pilot",       sub:"front 37.0″", arm:37},
+  {id:"rear1",name:"Rear Seat 1",    sub:"73.0″",       arm:73},
+  {id:"rear2",name:"Rear Seat 2",    sub:"73.0″",       arm:73},
+  {id:"bag1", name:"Baggage #1",     sub:"max 120 lb · 95.0″", arm:95},
+  {id:"bag2", name:"Baggage #2",     sub:"max 60 lb · 123.0″", arm:123},
+];
+let currentType="C172S", category="normal", bewArm=0;
+function spec(){ return TYPE_SPEC[currentType]; }
+
+/* ---------- Build UI ---------- */
+function buildRegOptions(){
+  const sel=document.getElementById("m_reg");
+  Object.keys(AIRCRAFT).forEach(r=>{ const o=document.createElement("option"); o.value=r; o.textContent=r; sel.appendChild(o); });
+}
+function buildStations(){
+  const host=document.getElementById("stations");
+  let h="";
+  STATIONS.forEach(s=>{
+    const ro=s.locked?'readonly':'';
+    h+=`<div class="stn">
+      <div class="name"><b>${s.name}</b><small>${s.sub}</small></div>
+      <div class="wbox">
+        <div class="u"><input id="kg_${s.id}" inputmode="decimal" ${ro} placeholder="0"><span class="unit">kg</span></div>
+        <div class="u"><input id="w_${s.id}" inputmode="decimal" ${ro} placeholder="0"><span class="unit">lb</span></div>
+      </div>
+    </div>
+    <div class="detail" id="d_${s.id}">—</div>`;
+  });
+  /* fuel (gallons) */
+  h+=`<div class="stn">
+      <div class="name"><b>Usable Fuel</b><small>× 6 lb/gal · 48.0″</small></div>
+      <div class="wbox single"><div class="u">
+        <input id="fuel_gal" inputmode="decimal" placeholder="0"><span class="unit">gal</span>
+      </div></div>
+    </div>
+    <div class="detail" id="d_fuel">—</div>`;
+  host.innerHTML=h;
+  /* two-way kg <-> lb on each editable station */
+  STATIONS.forEach(s=>{
+    if(s.locked) return;                       // BEW is auto-filled
+    const kg=document.getElementById("kg_"+s.id), lb=document.getElementById("w_"+s.id);
+    kg.addEventListener("input",()=>{ lb.value = kg.value===""?"":fmtIn(parseFloat(kg.value)*LB_PER_KG); recalc(); saveState(); });
+    lb.addEventListener("input",()=>{ kg.value = lb.value===""?"":fmtIn(parseFloat(lb.value)/LB_PER_KG); recalc(); saveState(); });
+  });
+  document.getElementById("fuel_gal").addEventListener("input",()=>{ recalc(); saveState(); });
+}
+function fmtIn(x){ return isNaN(x)?"":(Math.round(x*10)/10); }
+
+function onRegChange(){
+  const reg=document.getElementById("m_reg").value, ac=AIRCRAFT[reg];
+  currentType=(ac&&ac.type)?ac.type:"C172S";
+  document.getElementById("chipType").textContent="Type "+currentType.replace("C172","C-172");
+  document.getElementById("chipHp").textContent=spec().hp+" HP";
+  const hasUtil=ac&&ac.utility;
+  document.getElementById("btnUtility").disabled=!hasUtil;
+  if(!hasUtil&&category==="utility") setCategory("normal",true);
+  applyEmptyWeight(); saveState();
+}
+function setCategory(cat,silent){
+  if(cat==="utility"&&document.getElementById("btnUtility").disabled) return;
+  category=cat;
+  document.getElementById("btnNormal").classList.toggle("active",cat==="normal");
+  document.getElementById("btnUtility").classList.toggle("active",cat==="utility");
+  applyEmptyWeight(); if(!silent) saveState();
+}
+function applyEmptyWeight(){
+  const reg=document.getElementById("m_reg").value, ac=AIRCRAFT[reg];
+  const wEl=document.getElementById("w_bew"), kgEl=document.getElementById("kg_bew");
+  if(!ac){ wEl.value=""; kgEl.value=""; bewArm=0; recalc(); return; }
+  const d=(category==="utility"&&ac.utility)?ac.utility:ac.normal;
+  wEl.value=d.w; kgEl.value=fmtIn(d.w/LB_PER_KG); bewArm=d.arm;
+  recalc();
+}
+
+/* ---------- Calc ---------- */
+function num(id){ const v=parseFloat(document.getElementById(id).value); return isNaN(v)?0:v; }
+function fmt(n,d=1){ return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+function recalc(){
+  let totW=0, totM=0;
+  STATIONS.forEach(s=>{
+    const w=num("w_"+s.id), a=(s.id==="bew")?bewArm:s.arm, m=w*a;
+    document.getElementById("d_"+s.id).innerHTML = w
+      ? `arm ${fmt(a,2)}″ · <span class="m">moment ${fmt(m)}</span>`
+      : `arm ${a?fmt(a,2)+"″":"—"}`;
+    totW+=w; totM+=m;
+  });
+  const gal=num("fuel_gal"), fw=gal*FUEL_LB_PER_GAL, fm=fw*48;
+  document.getElementById("d_fuel").innerHTML = gal
+    ? `${fmt(fw)} lb · <span class="m">moment ${fmt(fm)}</span> · ${fmt(fw/LB_PER_KG)} kg`
+    : `× 6 lb/gal`;
+  totW+=fw; totM+=fm;
+
+  const cg=totW>0?totM/totW:0;
+  document.getElementById("r_wt").textContent=fmt(totW,0);
+  document.getElementById("r_cg").textContent=totW>0?fmt(cg,2):"—";
+
+  /* validation */
+  const errs=[]; const bag1=num("w_bag1"), bag2=num("w_bag2");
+  if(bag1>120) errs.push(`Baggage #1 ${fmt(bag1)} lb > 120 lb max`);
+  if(bag2>60)  errs.push(`Baggage #2 ${fmt(bag2)} lb > 60 lb max`);
+  if(bag1+bag2>120) errs.push(`Baggage #1+#2 ${fmt(bag1+bag2)} lb > 120 lb combined`);
+  if(gal>FUEL_MAX_GAL) errs.push(`Fuel ${fmt(gal)} gal > ${FUEL_MAX_GAL} gal usable`);
+  const maxW=spec().maxW[category];
+  let wOK=true, cgOK=true;
+  if(totW>maxW){ errs.push(`Gross ${fmt(totW)} lb > ${currentType} ${category} max ${maxW} lb`); wOK=false; }
+  if(totW>0){ cgOK=pointInPolygon([cg,totW],spec().envelope[category]); if(!cgOK) errs.push(`C.G. ${fmt(cg,2)}″ outside ${category} envelope`); }
+
+  const v=document.getElementById("r_verdict"), el=document.getElementById("r_errs");
+  if(!document.getElementById("m_reg").value){ v.className="verdict idle"; v.textContent="SELECT A/C"; }
+  else if(totW<=0){ v.className="verdict idle"; v.textContent="ENTER LOAD"; }
+  else if(errs.length===0){ v.className="verdict ok"; v.innerHTML="WITHIN LIMITS<small>Wt ✓ · CG ✓</small>"; }
+  else { v.className="verdict bad"; v.innerHTML=`CHECK LOADING<small>Wt ${wOK?'✓':'✗'} · CG ${cgOK?'✓':'✗'} · tap</small>`; }
+  el.innerHTML=errs.map(e=>`<li>${e}</li>`).join("");
+  if(errs.length===0) el.classList.add("hidden");
+
+  drawChart(totW,cg,totW>0);
+}
+function toggleErrors(){ const el=document.getElementById("r_errs"); if(el.children.length) el.classList.toggle("hidden"); }
+
+function pointInPolygon(p,poly){ const [x,y]=p; let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+  } return inside; }
+
+/* ---------- Chart ---------- */
+const CX={min:34,max:48}, CY={min:1500,max:2600}, PAD={l:60,r:16,t:18,b:48}, W=760,H=620;
+const sx=a=>PAD.l+(a-CX.min)/(CX.max-CX.min)*(W-PAD.l-PAD.r);
+const sy=w=>H-PAD.b-(w-CY.min)/(CY.max-CY.min)*(H-PAD.t-PAD.b);
+function drawChart(totW,cg,hasPoint){
+  document.getElementById("chartHead").textContent="Envelope — "+currentType.replace("C172","C-172");
+  let s=`<rect x="${sx(34)}" y="${sy(2600)}" width="${sx(48)-sx(34)}" height="${sy(1500)-sy(2600)}" fill="#fff" stroke="#2c3e6b" stroke-width="2"/>`;
+  for(let a=34;a<=48;a++){ s+=`<line x1="${sx(a)}" y1="${sy(1500)}" x2="${sx(a)}" y2="${sy(2600)}" stroke="#e6eaf2"/>`;
+    if(a%2===0) s+=`<text x="${sx(a)}" y="${sy(1500)+20}" font-size="15" text-anchor="middle" fill="#555">${a}</text>`; }
+  for(let w=1500;w<=2600;w+=100){ s+=`<line x1="${sx(34)}" y1="${sy(w)}" x2="${sx(48)}" y2="${sy(w)}" stroke="#e6eaf2"/>`;
+    if(w%200===0) s+=`<text x="${sx(34)-7}" y="${sy(w)+5}" font-size="15" text-anchor="end" fill="#555">${w}</text>`; }
+  s+=`<text x="${(sx(34)+sx(48))/2}" y="${H-10}" font-size="16" text-anchor="middle" fill="#222">C.G. — inches aft of datum</text>`;
+  s+=`<text transform="translate(16,${(sy(1500)+sy(2600))/2}) rotate(-90)" font-size="16" text-anchor="middle" fill="#222">WEIGHT (lb)</text>`;
+  const poly=(pts,f,st)=>`<polygon points="${pts.map(p=>sx(p[0])+","+sy(p[1])).join(" ")}" fill="${f}" stroke="${st}" stroke-width="2.5"/>`;
+  s+=poly(spec().envelope.normal,"rgba(44,62,107,0.05)","#1a1a2e");
+  s+=poly(spec().envelope.utility,"rgba(184,134,11,0.09)","#7a5b00");
+  if(hasPoint&&cg>=CX.min&&cg<=CX.max&&totW>=CY.min&&totW<=CY.max){
+    const px=sx(cg),py=sy(totW);
+    const inside=pointInPolygon([cg,totW],spec().envelope[category])&&totW<=spec().maxW[category];
+    const c=inside?"#1b7f3b":"#c0392b";
+    s+=`<line x1="${sx(34)}" y1="${py}" x2="${px}" y2="${py}" stroke="${c}" stroke-dasharray="5 4"/>`;
+    s+=`<line x1="${px}" y1="${sy(1500)}" x2="${px}" y2="${py}" stroke="${c}" stroke-dasharray="5 4"/>`;
+    s+=`<circle cx="${px}" cy="${py}" r="9" fill="${c}" stroke="#fff" stroke-width="2.5"/>`;
+  }
+  document.getElementById("chart").innerHTML=s;
+}
+
+/* ---------- Persist last selection ---------- */
+function saveState(){
+  try{ localStorage.setItem("c172wb", JSON.stringify({
+    reg:document.getElementById("m_reg").value, category,
+    loads:Object.fromEntries(STATIONS.filter(s=>!s.locked).map(s=>[s.id, document.getElementById("w_"+s.id).value])),
+    fuel:document.getElementById("fuel_gal").value
+  })); }catch(e){}
+}
+function loadState(){
+  try{ const d=JSON.parse(localStorage.getItem("c172wb")||"null"); if(!d) return;
+    if(d.reg && AIRCRAFT[d.reg]){ document.getElementById("m_reg").value=d.reg; onRegChange(); if(d.category) setCategory(d.category,true); }
+    if(d.loads) Object.entries(d.loads).forEach(([k,v])=>{ const el=document.getElementById("w_"+k);
+      if(el){ el.value=v; const kg=document.getElementById("kg_"+k); if(kg) kg.value=(v===""||v==null)?"":fmtIn(parseFloat(v)/LB_PER_KG); } });
+    if(d.fuel) document.getElementById("fuel_gal").value=d.fuel;
+  }catch(e){}
+}
+function resetForm(){
+  document.querySelectorAll("#stations input").forEach(i=>{ if(!i.readOnly) i.value=""; });
+  document.getElementById("fuel_gal").value="";
+  document.getElementById("m_mission").value=""; document.getElementById("m_sortie").value="";
+  recalc(); saveState();
+}
+
+/* ---------- Init ---------- */
+buildRegOptions(); buildStations();
+document.getElementById("m_date").valueAsDate=new Date();
+loadState(); recalc();
+
+/* PWA service worker */
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
