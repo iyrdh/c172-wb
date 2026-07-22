@@ -329,7 +329,7 @@
         <div class="i" style="width:135px"><input id="pf_rwyuse" class="txt" placeholder="e.g. 24"></div></div>
       <div class="prow"><div class="l">Runway length</div>
         <div class="i" style="width:135px"><input id="pf_rwylen" class="txt" placeholder="e.g. 2100 m"></div></div>
-      <div class="prow"><div class="l">Available length<small>usable for T/O &amp; landing</small></div>
+      <div class="prow"><div class="l">Available length</div>
         <div class="i" style="width:135px"><input id="pf_avbl" class="txt" placeholder="e.g. 1800 m"></div></div>
       <div class="prow"><div class="l">Glide height<small>for max-glide distance (ft AGL)</small></div>
         <div class="i"><input id="pf_glidealt" inputmode="decimal" placeholder="0"><span class="u">ft</span></div></div>
@@ -1086,7 +1086,7 @@ function pfComputePerf(){
   if(hasVal("pf_oat")) P(fmt(d.oat,0)+" °C",P2.temp);
   if(hasVal("pf_elev")||hasVal("pf_qnh")){ P(fmt(d.pa,0)+" ft",P2.pa); if(hasVal("pf_oat")) P(fmt(d.da,0)+" ft",P2.da); }
   P(V("pf_avbl"),P2.avbl);
-  if(d.wspd>0) P((d.hw>=0?fmt(d.hw,0)+" kt HW":fmt(-d.hw,0)+" kt TW")+"  /  "+fmt(Math.abs(d.xw),0)+" kt "+(d.xw>=0?"R":"L"),P2.wind);
+  if(d.wspd>0) P((d.hw>=0?fmt(d.hw,0)+" kt HW":fmt(-d.hw,0)+" kt TW")+"  /  "+fmt(Math.abs(d.xw),0)+" kt "+(d.xw>=0?"R":"L")+"   (wind "+fmt(num("pf_wdir"),0)+"° / "+fmt(d.wspd,0)+" kt)",P2.wind);
   if(hasVal("pf_elev")) P(fmt(d.elev,0)+" ft",P2.elev);
   P(V("pf_rwyuse"),P2.rwyuse); P(V("pf_rwylen"),P2.rwylen);
   P(d.gh>0? fmt(d.glide,1)+" nm from "+fmt(d.gh,0)+" ft  (68 KIAS, flaps up)":"≈1.5 nm / 1000 ft  (68 KIAS, flaps up)",P2.glide);
