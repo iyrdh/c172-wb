@@ -177,6 +177,7 @@
   .prow .i{ width:124px; flex:none; position:relative; }
   .prow .i input{ text-align:right; padding:10px 32px 10px 8px; font-weight:600; width:100%; }
   .prow .i input[readonly]{ background:#eef1f6; color:var(--ink); }
+  .prow .i input.txt{ text-align:left; padding:10px 8px; font-weight:600; }
   .prow .i .u{ position:absolute; right:9px; top:50%; transform:translateY(-50%);
          font-size:11px; color:var(--muted); pointer-events:none; }
   /* ---- Performance result rows ---- */
@@ -196,22 +197,23 @@
        border-radius:10px; font-size:12.5px; margin:2px 2px 10px; line-height:1.4; }
   .cat-toggle.compact button{ padding:8px 9px; font-size:13px; }
 
-  /* ============ PRINT FORM — exact BAC form image + overlaid values ============ */
-  #printform{ display:none; }
-  #pfsheet{ position:relative; width:100%; }
-  #pfsheet .pf-bg{ display:block; width:100%; height:auto; }
-  #pfsheet .ov{ position:absolute; font-family:"Times New Roman",Georgia,serif; color:#000;
+  /* ============ PRINT FORMS — exact form images + overlaid values ============ */
+  #printform, #perfform{ display:none; }
+  #pfsheet, #perfsheet{ position:relative; width:100%; }
+  #pfsheet .pf-bg, #perfsheet .pf-bg{ display:block; width:100%; height:auto; }
+  #pfsheet .ov, #perfsheet .ov{ position:absolute; font-family:"Times New Roman",Georgia,serif; color:#000;
     white-space:nowrap; line-height:1; }
   #pfsheet .ovdot{ position:absolute; width:1.6%; padding-bottom:1.6%; height:0;
     border-radius:50%; transform:translate(-50%,-50%); }
   @media print{
-    @page{ size:letter portrait; margin:0; }
     html,body{ background:#fff !important; }
     body > *{ display:none !important; }
-    #printform{ display:block !important; }
-    #pfsheet{ width:8.5in; height:11in; }
-    #pfsheet .pf-bg{ width:8.5in; height:11in; }
+    body[data-print="wb"] #printform{ display:block !important; }
+    body[data-print="wb"] #pfsheet, body[data-print="wb"] #pfsheet .pf-bg{ width:8.5in; height:11in; }
+    body[data-print="perf"] #perfform{ display:block !important; }
+    body[data-print="perf"] #perfsheet, body[data-print="perf"] #perfsheet .pf-bg{ width:210mm; height:297mm; }
     #pfsheet .ov{ font-size:9.5pt; }
+    #perfsheet .ov{ font-size:9pt; }
   }
 </style>
 </head>
@@ -323,6 +325,16 @@
         <div class="i"><input id="pf_wspd" inputmode="decimal" placeholder="0"><span class="u">kt</span></div></div>
       <div class="prow"><div class="l">Runway surface<small>grass adds 15% TO / 45% LDG of ground roll</small></div>
         <div class="cat-toggle"><button id="pfSurfPaved" class="active" onclick="setPerfSurface(false)">Paved</button><button id="pfSurfGrass" onclick="setPerfSurface(true)">Grass</button></div></div>
+      <div class="prow"><div class="l">Runway in use</div>
+        <div class="i" style="width:135px"><input id="pf_rwyuse" class="txt" placeholder="e.g. 24"></div></div>
+      <div class="prow"><div class="l">Runway length</div>
+        <div class="i" style="width:135px"><input id="pf_rwylen" class="txt" placeholder="e.g. 2100 m"></div></div>
+      <div class="prow"><div class="l">Available length<small>usable for T/O &amp; landing</small></div>
+        <div class="i" style="width:135px"><input id="pf_avbl" class="txt" placeholder="e.g. 1800 m"></div></div>
+      <div class="prow"><div class="l">Glide height<small>for max-glide distance (ft AGL)</small></div>
+        <div class="i"><input id="pf_glidealt" inputmode="decimal" placeholder="0"><span class="u">ft</span></div></div>
+      <div class="prow"><div class="l">Remark</div>
+        <div class="i" style="width:160px"><input id="pf_remark" class="txt" placeholder="optional"></div></div>
     </section>
     <section>
       <div class="sechead">Fuel plan — inputs</div>
@@ -376,7 +388,11 @@
       <div class="pf"><span class="lab">Margin <span id="pf_f_badge" class="pillbox"></span></span><span class="val"><span id="pf_f_diff">—</span> <small>gal</small></span></div>
       <div class="pf"><span class="lab">Endurance</span><span class="val"><span id="pf_f_end">—</span> <small>hr</small></span></div>
     </section>
-    <p class="foot">Pressure altitude ≈ field elev + (1013 − QNH)×30 ft; density altitude ≈ PA + 120 ft per °C above ISA (standard rules of thumb). Fuel: contingency = 5 min, final reserve = 45 min at your cruise GPH; trip &amp; alternate = distance ÷ groundspeed × GPH. Verify everything against the POH and your ops manual.</p>
+    <div class="actions">
+      <button onclick="exportPerfImage()">Save / Share Image</button>
+      <button class="primary" onclick="printPerfForm()">Print / PDF</button>
+    </div>
+    <p class="foot">Pressure altitude ≈ field elev + (1013 − QNH)×30 ft; density altitude ≈ PA + 120 ft per °C above ISA (standard rules of thumb). Fuel: contingency = 5 min, final reserve = 45 min at your cruise GPH; trip &amp; alternate = distance ÷ groundspeed × GPH. Gliding ≈ 1.5 nm / 1000 ft at 68 KIAS (POH max-glide). Verify everything against the POH and your ops manual.</p>
   </div>
   </div>
   </div><!-- /page-perf -->
@@ -397,6 +413,12 @@
   <div id="pfsheet">
     <img src="wb-form.jpg" class="pf-bg" alt="C-172 Weight &amp; Balance form">
     <!-- overlay values are injected & positioned by fillPrintForm() -->
+  </div>
+</div>
+<div id="perfform">
+  <div id="perfsheet">
+    <img src="perf-form.jpg" class="pf-bg" alt="Aircraft Performance Data form">
+    <!-- overlay values are injected & positioned by fillPerfForm() -->
   </div>
 </div>
 
@@ -925,7 +947,7 @@ function calcPerf(){
   const dn=document.getElementById("pf_distnote"); if(dn){ dn.textContent=n; dn.style.whiteSpace="pre-line"; }
   refreshLanding();   /* trip/taxi fuel affects landing weight on the W&B chart */
 }
-const PERF_FIELDS=["pf_elev","pf_qnh","pf_oat","pf_rwy","pf_wdir","pf_wspd","pf_gph","pf_gs","pf_taxi","pf_trip","pf_altd"];
+const PERF_FIELDS=["pf_elev","pf_qnh","pf_oat","pf_rwy","pf_wdir","pf_wspd","pf_gph","pf_gs","pf_taxi","pf_trip","pf_altd","pf_rwyuse","pf_rwylen","pf_avbl","pf_glidealt","pf_remark"];
 function savePerf(){ try{ const o={type:perfType,grass:perfGrass,qnhUnit,tofFlap,ldgFlap,tripMode,contMode}; PERF_FIELDS.forEach(f=>o[f]=document.getElementById(f).value); localStorage.setItem("c172perf",JSON.stringify(o)); }catch(e){} }
 function loadPerf(){ try{ const o=JSON.parse(localStorage.getItem("c172perf")||"null"); if(!o) return;
   PERF_FIELDS.forEach(f=>{ const e=document.getElementById(f); if(e&&o[f]!=null) e.value=o[f]; });
@@ -967,7 +989,7 @@ function pfCompute(){
   let totW=0, totM=0;
   STATIONS.forEach(s=>{
     const w=num("w_"+s.id), a=(s.id==="bew")?bewArm:s.arm, m=w*a, y=PF_ROWY[s.id];
-    if(s.who){ const nm=(document.getElementById("nm_"+s.id)||{}).value; if(nm) P(nm, 22.0, y, "l"); }
+    if(s.who){ const nm=(document.getElementById("nm_"+s.id)||{}).value; if(nm) P(nm, 24.0, y-0.15, "l"); }
     if(w){ P(fmt(w/LB_PER_KG,1),PF_COL.kg,y); P(fmt(w,1),PF_COL.lbs,y); P(fmt(a,2),PF_COL.arm,y); P(fmt(m,1),PF_COL.mom,y); }
     totW+=w; totM+=m;
   });
@@ -1010,8 +1032,100 @@ function fillPrintForm(){
   [dot,dot2].forEach(pt=>{ if(pt){ const d=document.createElement("span"); d.className="ovdot";
     d.style.left=pt.x+"%"; d.style.top=pt.y+"%"; d.style.background=pt.color; sheet.appendChild(d); } });
 }
-function printForm(){ fillPrintForm(); window.print(); }
-window.addEventListener("beforeprint", fillPrintForm);
+function setPageSize(s){ let el=document.getElementById("pageSizeStyle"); if(!el){ el=document.createElement("style"); el.id="pageSizeStyle"; document.head.appendChild(el); } el.textContent="@media print{@page{size:"+s+";margin:0}}"; }
+function printForm(){ document.body.dataset.print="wb"; setPageSize("letter portrait"); fillPrintForm(); window.print(); }
+function printPerfForm(){ document.body.dataset.print="perf"; setPageSize("A4 portrait"); fillPerfForm(); window.print(); }
+window.addEventListener("beforeprint", ()=>{
+  const perf = !document.getElementById("page-perf").hidden;
+  document.body.dataset.print = perf ? "perf" : "wb";
+  setPageSize(perf ? "A4 portrait" : "letter portrait");
+  if(perf) fillPerfForm(); else fillPrintForm();
+});
+
+/* ---------- Performance sheet (overlay onto perf-form.jpg) ---------- */
+function hasVal(id){ const e=document.getElementById(id); return e && e.value!==""; }
+function perfSnapshot(){
+  const elev=num("pf_elev"), oat=num("pf_oat");
+  let qnhRaw=num("pf_qnh");
+  const qnh=(qnhUnit==="inHg")?(qnhRaw?qnhRaw*HPA_PER_INHG:1013.25):(qnhRaw||1013.25);
+  const pa=elev+(1013.25-qnh)*30, isa=15-1.98*(pa/1000), da=pa+120*(oat-isa);
+  const rwy=num("pf_rwy"), wdir=num("pf_wdir"), wspd=num("pf_wspd");
+  const ang=(wdir-rwy)*Math.PI/180, hw=wspd*Math.cos(ang), xw=wspd*Math.sin(ang);
+  const wt=wbW||num("pf_weight");
+  const toChart=perfDistance(perfType,"takeoff",wt,pa,oat);
+  const ldChart=perfDistance(perfType,"landing",wt,pa,oat);
+  const toShort=applyCorrections(toChart,"takeoff",hw,perfGrass);
+  const toNormal=toChart?applyCorrections([toChart[0]/0.9,toChart[1]/0.9],"takeoff",hw,perfGrass):null;
+  const ldFull=applyCorrections(ldChart,"landing",hw,perfGrass);
+  const gph=num("pf_gph"), gs=num("pf_gs"), taxi=num("pf_taxi");
+  const tripFuel=tripFuelGal();
+  const altd=num("pf_altd"), altFuel=(gs>0)?gph*altd/gs:0;
+  let contFuel; if(contMode==="5pct") contFuel=tripFuel*0.05; else if(contMode==="5min_trip") contFuel=tripFuel*(5/60); else contFuel=gph*5/60;
+  const resFuel=gph*45/60, total=taxi+tripFuel+contFuel+altFuel+resFuel;
+  const onboard=num("pf_onboard"), extra=onboard-total;
+  const gh=num("pf_glidealt"), glide=gh>0?gh*0.0015:0;   /* 1.5 nm per 1000 ft (best glide 68 KIAS) */
+  return {elev,oat,qnh,pa,da,hw,xw,wspd,wt,toShort,toNormal,ldFull,gph,gs,taxi,tripFuel,contFuel,resFuel,altFuel,total,onboard,extra,gh,glide,landing:landingState(wbW,wbM)};
+}
+/* perf form box positions [xLeft%, yCenter%] (measured from perf-form.jpg) */
+const P2={ date:[38.5,10.34],reg:[74.8,10.34], toN:[38.5,13.06],toS:[74.8,13.06], ldN:[38.5,15.80],ldS:[74.8,15.80],
+  toW:[38.5,20.84],ldW:[38.5,23.59],fOB1:[38.5,26.31],qnh:[38.5,29.03],temp:[38.5,31.76],pa:[38.5,34.48],da:[38.5,37.23],
+  avbl:[38.5,39.95],wind:[38.5,42.68],elev:[38.5,45.40],rwyuse:[38.5,48.12],rwylen:[38.5,50.86],glide:[38.5,53.60],remark:[38.5,56.32],
+  fOB:[38.5,64.29],fTaxi:[38.5,67.01],fTrip:[38.5,69.77],fCont:[38.5,72.49],fRes:[38.5,75.21],fAlt:[38.5,77.93],fExtra:[38.5,80.65] };
+function pfComputePerf(){
+  const V=id=>{const e=document.getElementById(id);return e?e.value:"";};
+  const d=perfSnapshot(), items=[];
+  const P=(t,pos)=>{ if(t!=null&&t!=="") items.push({t:String(t),x:pos[0],y:pos[1],a:"l",c:"#111"}); };
+  const dist=v=> v?`${fmt(Math.round(v[0]/5)*5,0)} / ${fmt(Math.round(v[1]/5)*5,0)} ft`:"";
+  const distsOK = d.wt>0 && (hasVal("pf_elev")||hasVal("pf_qnh")||hasVal("pf_oat"));
+  P(V("m_date"),P2.date); P(V("m_reg"),P2.reg);
+  if(distsOK){ P(dist(d.toNormal),P2.toN); P(dist(d.toShort),P2.toS); P(dist(d.ldFull),P2.ldN); P(dist(d.ldFull),P2.ldS); }
+  if(d.wt>0) P(fmt(d.wt,0)+" lb",P2.toW);
+  if(d.landing) P(fmt(d.landing.w,0)+" lb",P2.ldW);
+  if(d.onboard>0) P(fmt(d.onboard,1)+" gal  ·  "+fmt(d.onboard*6,0)+" lb",P2.fOB1);
+  if(hasVal("pf_qnh")) P(V("pf_qnh")+" "+qnhUnit,P2.qnh);
+  if(hasVal("pf_oat")) P(fmt(d.oat,0)+" °C",P2.temp);
+  if(hasVal("pf_elev")||hasVal("pf_qnh")){ P(fmt(d.pa,0)+" ft",P2.pa); if(hasVal("pf_oat")) P(fmt(d.da,0)+" ft",P2.da); }
+  P(V("pf_avbl"),P2.avbl);
+  if(d.wspd>0) P((d.hw>=0?fmt(d.hw,0)+" kt HW":fmt(-d.hw,0)+" kt TW")+"  /  "+fmt(Math.abs(d.xw),0)+" kt "+(d.xw>=0?"R":"L"),P2.wind);
+  if(hasVal("pf_elev")) P(fmt(d.elev,0)+" ft",P2.elev);
+  P(V("pf_rwyuse"),P2.rwyuse); P(V("pf_rwylen"),P2.rwylen);
+  P(d.gh>0? fmt(d.glide,1)+" nm from "+fmt(d.gh,0)+" ft  (68 KIAS, flaps up)":"≈1.5 nm / 1000 ft  (68 KIAS, flaps up)",P2.glide);
+  P(V("pf_remark"),P2.remark);
+  const G=v=> d.gph>0? fmt(v,2)+" gal":"";
+  if(d.onboard>0) P(fmt(d.onboard,2)+" gal",P2.fOB);
+  P(G(d.taxi),P2.fTaxi); P(G(d.tripFuel),P2.fTrip); P(G(d.contFuel),P2.fCont);
+  P(G(d.resFuel),P2.fRes); P(G(d.altFuel),P2.fAlt);
+  if(d.gph>0) P(fmt(d.extra,2)+" gal",P2.fExtra);
+  return {items};
+}
+function fillPerfForm(){
+  const sheet=document.getElementById("perfsheet");
+  sheet.querySelectorAll(".ov").forEach(e=>e.remove());
+  pfComputePerf().items.forEach(it=>{
+    const e=document.createElement("span"); e.className="ov"; e.textContent=it.t;
+    e.style.left=it.x+"%"; e.style.top=it.y+"%"; e.style.color=it.c||"#111"; e.style.transform="translateY(-50%)";
+    sheet.appendChild(e);
+  });
+}
+function exportPerfImage(){
+  const img=document.querySelector("#perfsheet .pf-bg");
+  const render=()=>{
+    const W=img.naturalWidth||2183, H=img.naturalHeight||3086;
+    const c=document.createElement("canvas"); c.width=W; c.height=H;
+    const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,W,H);
+    ctx.textBaseline="middle"; ctx.textAlign="left"; ctx.font=Math.round(W*0.0132)+'px "Times New Roman", Georgia, serif';
+    pfComputePerf().items.forEach(it=>{ ctx.fillStyle=it.c||"#111"; ctx.fillText(it.t, it.x/100*W, it.y/100*H); });
+    const reg=(document.getElementById("m_reg").value||"C172"), date=(document.getElementById("m_date").value||"");
+    const name="PERF_"+reg+(date?"_"+date:"")+".png";
+    const finish=(blob)=>{ if(!blob){ alert("Could not create image."); return; }
+      const file=new File([blob],name,{type:"image/png"});
+      if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file],title:"C-172 Performance — "+reg}).catch(()=>{}); }
+      else { const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.download=name; a.href=url; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000); } };
+    try{ if(c.toBlob) c.toBlob(finish,"image/png"); else { const a=document.createElement("a"); a.download=name; a.href=c.toDataURL("image/png"); a.click(); } }
+    catch(e){ alert("Could not export image: "+e.message); }
+  };
+  if(img && img.complete && img.naturalWidth) render(); else if(img){ img.addEventListener("load", render, {once:true}); }
+}
 
 /* render the filled form to a high-res PNG, then share (mobile) or download */
 function exportImage(){
