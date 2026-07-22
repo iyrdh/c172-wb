@@ -192,6 +192,24 @@
   .pending{ background:#fff8e6; border:1px solid #f0d68a; color:#8a6d1b; padding:10px 12px;
        border-radius:10px; font-size:12.5px; margin:2px 2px 10px; line-height:1.4; }
   .cat-toggle.compact button{ padding:8px 9px; font-size:13px; }
+
+  /* ============ PRINT FORM — exact BAC form image + overlaid values ============ */
+  #printform{ display:none; }
+  #pfsheet{ position:relative; width:100%; }
+  #pfsheet .pf-bg{ display:block; width:100%; height:auto; }
+  #pfsheet .ov{ position:absolute; font-family:"Times New Roman",Georgia,serif; color:#000;
+    white-space:nowrap; line-height:1; }
+  #pfsheet .ovdot{ position:absolute; width:1.6%; padding-bottom:1.6%; height:0;
+    border-radius:50%; transform:translate(-50%,-50%); }
+  @media print{
+    @page{ size:letter portrait; margin:0; }
+    html,body{ background:#fff !important; }
+    body > *{ display:none !important; }
+    #printform{ display:block !important; }
+    #pfsheet{ width:8.5in; height:11in; }
+    #pfsheet .pf-bg{ width:8.5in; height:11in; }
+    #pfsheet .ov{ font-size:9.5pt; }
+  }
 </style>
 </head>
 <body>
@@ -248,11 +266,13 @@
     <div class="sechead" id="chartHead">Envelope</div>
     <div class="chart-wrap">
       <svg id="chart" viewBox="0 0 760 620" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div class="legend"><b class="n">▦ Normal</b> &nbsp;·&nbsp; <b class="u">▦ Utility</b> &nbsp;·&nbsp; ● your loading</div>
+      <div class="legend"><b class="n">▦ Normal</b> &nbsp;·&nbsp; <b class="u">▦ Utility</b> &nbsp;·&nbsp; <span style="color:#1b7f3b">●</span> Takeoff &nbsp;·&nbsp; <span style="color:#1f6fb2">●</span> Landing</div>
+      <div class="legend" id="landReadout" style="margin-top:2px;"></div>
     </div>
     <div class="actions">
       <button onclick="resetForm()">Reset</button>
-      <button class="primary" onclick="window.print()">Print / Save PDF</button>
+      <button onclick="saveJpeg()">Save JPEG</button>
+      <button class="primary" onclick="printForm()">Print / PDF</button>
     </div>
     <p class="foot">
       Standard arms (POH): front 37.0″, rear 73.0″, bag&nbsp;1 95.0″, bag&nbsp;2 123.0″, fuel 48.0″. Fuel @ 6 lb/gal.
@@ -367,6 +387,14 @@
     <div class="verdict idle" id="r_verdict" onclick="toggleErrors()">SELECT A/C</div>
   </div>
   <ul class="errlist hidden" id="r_errs"></ul>
+</div>
+
+<!-- ============ PRINT-ONLY: exact BAC form image with data overlaid ============ -->
+<div id="printform">
+  <div id="pfsheet">
+    <img src="wb-form.jpg" class="pf-bg" alt="C-172 Weight &amp; Balance form">
+    <!-- overlay values are injected & positioned by fillPrintForm() -->
+  </div>
 </div>
 
 <script>
@@ -539,8 +567,23 @@ function recalc(){
   el.innerHTML=errs.map(e=>`<li>${e}</li>`).join("");
   if(errs.length===0) el.classList.add("hidden");
 
-  drawChart(totW,cg,totW>0);
+  wbW=totW; wbM=totM; wbCG=cg; wbHas=totW>0;
+  refreshLanding();
   syncPerf(totW, num("fuel_gal"));
+}
+/* last W&B totals, so the Performance tab can refresh the landing point */
+let wbW=0, wbM=0, wbCG=0, wbHas=false;
+function refreshLanding(){
+  const landing=landingState(wbW, wbM);
+  drawChart(wbW, wbCG, wbHas, landing);
+  const lr=document.getElementById("landReadout"); if(!lr) return;
+  if(landing){
+    const lin=pointInPolygon([landing.cg,landing.w],spec().envelope[category]) && landing.w<=spec().maxW[category];
+    lr.innerHTML=`<b style="color:#1b7f3b">Takeoff</b> ${fmt(wbW,0)} lb @ ${fmt(wbCG,2)}″ &nbsp;·&nbsp; `+
+      `<b style="color:#1f6fb2">Landing</b> ${fmt(landing.w,0)} lb @ ${fmt(landing.cg,2)}″ `+
+      `<span style="color:${lin?'#1b7f3b':'#c0392b'}">${lin?'✓':'✗'}</span> `+
+      `<span style="color:var(--muted)">(−${fmt(landing.burnLb,0)} lb burn-off)</span>`;
+  } else lr.innerHTML = wbHas ? `<span style="color:var(--muted)">Add trip fuel on the Performance tab to show landing weight.</span>` : "";
 }
 function toggleErrors(){ const el=document.getElementById("r_errs"); if(el.children.length) el.classList.toggle("hidden"); }
 
@@ -550,11 +593,28 @@ function pointInPolygon(p,poly){ const [x,y]=p; let inside=false;
     if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
   } return inside; }
 
+/* ---------- Landing weight (from the performance fuel plan) ---------- */
+function tripFuelGal(){
+  const gph=num("pf_gph"), gs=num("pf_gs"), tin=num("pf_trip");
+  if(tripMode==="gal") return tin;
+  if(tripMode==="time") return gph*tin/60;
+  return (gs>0)? gph*tin/gs : 0;           /* distance mode */
+}
+/* fuel burned from ramp to destination = taxi + trip */
+function landingBurnGal(){ return num("pf_taxi") + tripFuelGal(); }
+/* landing weight & CG: subtract burned fuel (which sat at the 48" fuel arm) */
+function landingState(totW, totM){
+  const burnLb = landingBurnGal()*FUEL_LB_PER_GAL;
+  if(!(burnLb>0) || !(totW>0)) return null;
+  const w = totW - burnLb, m = totM - burnLb*48;
+  return { w, cg: w>0? m/w : 0, burnLb };
+}
+
 /* ---------- Chart ---------- */
 const CX={min:34,max:48}, CY={min:1500,max:2600}, PAD={l:60,r:16,t:18,b:48}, W=760,H=620;
 const sx=a=>PAD.l+(a-CX.min)/(CX.max-CX.min)*(W-PAD.l-PAD.r);
 const sy=w=>H-PAD.b-(w-CY.min)/(CY.max-CY.min)*(H-PAD.t-PAD.b);
-function drawChart(totW,cg,hasPoint){
+function drawChart(totW,cg,hasPoint,landing){
   document.getElementById("chartHead").textContent="Envelope — "+currentType.replace("C172","C-172");
   let s=`<rect x="${sx(34)}" y="${sy(2600)}" width="${sx(48)-sx(34)}" height="${sy(1500)-sy(2600)}" fill="#fff" stroke="#2c3e6b" stroke-width="2"/>`;
   for(let a=34;a<=48;a++){ s+=`<line x1="${sx(a)}" y1="${sy(1500)}" x2="${sx(a)}" y2="${sy(2600)}" stroke="#e6eaf2"/>`;
@@ -566,12 +626,24 @@ function drawChart(totW,cg,hasPoint){
   const poly=(pts,f,st)=>`<polygon points="${pts.map(p=>sx(p[0])+","+sy(p[1])).join(" ")}" fill="${f}" stroke="${st}" stroke-width="2.5"/>`;
   s+=poly(spec().envelope.normal,"rgba(44,62,107,0.05)","#1a1a2e");
   s+=poly(spec().envelope.utility,"rgba(184,134,11,0.09)","#7a5b00");
-  if(hasPoint&&cg>=CX.min&&cg<=CX.max&&totW>=CY.min&&totW<=CY.max){
-    const px=sx(cg),py=sy(totW);
-    const inside=pointInPolygon([cg,totW],spec().envelope[category])&&totW<=spec().maxW[category];
-    const c=inside?"#1b7f3b":"#c0392b";
+  s+=`<text x="${sx(43.7)}" y="${sy(2060)}" font-size="16" text-anchor="middle" fill="#555">Normal Category</text>`;
+  s+=`<text x="${sx(37.9)}" y="${sy(1720)}" font-size="15" text-anchor="middle" fill="#7a5b00">Utility Category</text>`;
+  const inEnv=(x,y)=> pointInPolygon([x,y],spec().envelope[category]) && y<=spec().maxW[category];
+  const onChart=(x,y)=> x>=CX.min&&x<=CX.max&&y>=CY.min&&y<=CY.max;
+  /* fuel-burn vector connecting takeoff → landing */
+  if(hasPoint && landing && onChart(cg,totW) && onChart(landing.cg,landing.w)){
+    s+=`<line x1="${sx(cg)}" y1="${sy(totW)}" x2="${sx(landing.cg)}" y2="${sy(landing.w)}" stroke="#888" stroke-width="1.5" stroke-dasharray="2 3"/>`;
+  }
+  /* takeoff point (green in-limits / red out) */
+  if(hasPoint && onChart(cg,totW)){
+    const px=sx(cg),py=sy(totW), c=inEnv(cg,totW)?"#1b7f3b":"#c0392b";
     s+=`<line x1="${sx(34)}" y1="${py}" x2="${px}" y2="${py}" stroke="${c}" stroke-dasharray="5 4"/>`;
     s+=`<line x1="${px}" y1="${sy(1500)}" x2="${px}" y2="${py}" stroke="${c}" stroke-dasharray="5 4"/>`;
+    s+=`<circle cx="${px}" cy="${py}" r="9" fill="${c}" stroke="#fff" stroke-width="2.5"/>`;
+  }
+  /* landing point (blue in-limits / orange out) */
+  if(landing && onChart(landing.cg,landing.w)){
+    const px=sx(landing.cg),py=sy(landing.w), c=inEnv(landing.cg,landing.w)?"#1f6fb2":"#e67e22";
     s+=`<circle cx="${px}" cy="${py}" r="9" fill="${c}" stroke="#fff" stroke-width="2.5"/>`;
   }
   document.getElementById("chart").innerHTML=s;
@@ -845,6 +917,7 @@ function calcPerf(){
     if(warn.length) n="⚠️ "+warn.join("; ")+".\n"+n;
   }
   const dn=document.getElementById("pf_distnote"); if(dn){ dn.textContent=n; dn.style.whiteSpace="pre-line"; }
+  refreshLanding();   /* trip/taxi fuel affects landing weight on the W&B chart */
 }
 const PERF_FIELDS=["pf_elev","pf_qnh","pf_oat","pf_rwy","pf_wdir","pf_wspd","pf_gph","pf_gs","pf_taxi","pf_trip","pf_altd"];
 function savePerf(){ try{ const o={type:perfType,grass:perfGrass,qnhUnit,tofFlap,ldgFlap,tripMode,contMode}; PERF_FIELDS.forEach(f=>o[f]=document.getElementById(f).value); localStorage.setItem("c172perf",JSON.stringify(o)); }catch(e){} }
@@ -869,6 +942,91 @@ function loadPerf(){ try{ const o=JSON.parse(localStorage.getItem("c172perf")||"
     document.getElementById("pf_trip_u").textContent=m[1];
   }
   if(o.grass) setPerfSurface(true); }catch(e){} }
+
+/* ---------- Print form: overlay values onto the exact BAC form image ---------- */
+/* Positions are % of the form image (2244×2904). Column X-centres & row Y-baselines. */
+const PF_COL={ kg:56.6, lbs:67.6, arm:78.8, mom:91.0 };
+const PF_ROWY={ bew:18.66, pilot:20.77, copil:22.87, rear1:24.93, rear2:27.07, bag1:29.13, bag2:31.27, fuel:33.61, total:36.16 };
+/* chart axis calibration (measured image %): x at CG=34 and 48, y at weight=1500 and 2600 */
+const PF_CHART={ x34:23.80, x48:84.63, y1500:80.68, y2600:56.40 };
+function pfChartX(cg){ return PF_CHART.x34 + (cg-34)/(48-34)*(PF_CHART.x48-PF_CHART.x34); }
+function pfChartY(w){ return PF_CHART.y1500 + (w-1500)/(2600-1500)*(PF_CHART.y2600-PF_CHART.y1500); }
+/* build overlay spec (shared by print DOM & JPEG canvas) */
+function pfCompute(){
+  const V=id=>{const e=document.getElementById(id);return e?e.value:"";};
+  const items=[];
+  const P=(t,x,y,a)=>{ if(t!=null && t!=="") items.push({t:String(t),x,y,a:a||"c"}); };
+  P(V("m_date"),11.0,14.25); P(V("m_mission"),32.5,14.25); P(V("m_reg"),79.0,14.25);
+  P(V("m_sortie"),26.0,16.35,"l");
+  let totW=0, totM=0;
+  STATIONS.forEach(s=>{
+    const w=num("w_"+s.id), a=(s.id==="bew")?bewArm:s.arm, m=w*a, y=PF_ROWY[s.id];
+    if(w){ P(fmt(w/LB_PER_KG,1),PF_COL.kg,y); P(fmt(w,1),PF_COL.lbs,y); P(fmt(a,2),PF_COL.arm,y); P(fmt(m,1),PF_COL.mom,y); }
+    totW+=w; totM+=m;
+  });
+  const gal=num("fuel_gal"), fw=gal*6, fm=fw*48, yf=PF_ROWY.fuel;
+  if(gal){ P(fmt(gal,1),24.5,yf); P(fmt(fw,1),PF_COL.lbs,yf); P("48.00",PF_COL.arm,yf); P(fmt(fm,1),PF_COL.mom,yf); }
+  totW+=fw; totM+=fm;
+  const cg=totW>0? totM/totW:0;
+  if(totW){
+    P(fmt(totW,1),PF_COL.lbs,PF_ROWY.total); P(fmt(totM,1),PF_COL.mom,PF_ROWY.total);
+    P(fmt(totM,1),40.3,44.85); P(fmt(totW,1),51.5,44.85); P(fmt(cg,2),63.8,44.85);
+  }
+  let dot=null;
+  if(totW>0 && cg>=34 && cg<=48 && totW>=1500 && totW<=2600){
+    const inside=pointInPolygon([cg,totW],spec().envelope[category]) && totW<=spec().maxW[category];
+    dot={ x:pfChartX(cg), y:pfChartY(totW), color:inside?"#1b7f3b":"#c0392b" };
+  }
+  let dot2=null;
+  const land=landingState(totW,totM);
+  if(land && land.cg>=34 && land.cg<=48 && land.w>=1500 && land.w<=2600){
+    const inside=pointInPolygon([land.cg,land.w],spec().envelope[category]) && land.w<=spec().maxW[category];
+    dot2={ x:pfChartX(land.cg), y:pfChartY(land.w), color:inside?"#1f6fb2":"#e67e22" };
+  }
+  return {items,dot,dot2};
+}
+function fillPrintForm(){
+  const sheet=document.getElementById("pfsheet");
+  sheet.querySelectorAll(".ov,.ovdot").forEach(e=>e.remove());
+  const {items,dot,dot2}=pfCompute();
+  items.forEach(it=>{
+    const e=document.createElement("span"); e.className="ov"; e.textContent=it.t;
+    e.style.left=it.x+"%"; e.style.top=it.y+"%";
+    e.style.transform=(it.a==="l")?"translateY(-50%)":"translate(-50%,-50%)";
+    sheet.appendChild(e);
+  });
+  [dot,dot2].forEach(pt=>{ if(pt){ const d=document.createElement("span"); d.className="ovdot";
+    d.style.left=pt.x+"%"; d.style.top=pt.y+"%"; d.style.background=pt.color; sheet.appendChild(d); } });
+}
+function printForm(){ fillPrintForm(); window.print(); }
+window.addEventListener("beforeprint", fillPrintForm);
+
+/* render the filled form to a canvas and download it as a JPEG */
+function saveJpeg(){
+  const img=document.querySelector("#pfsheet .pf-bg");
+  const render=()=>{
+    const W=img.naturalWidth||2244, H=img.naturalHeight||2904;
+    const c=document.createElement("canvas"); c.width=W; c.height=H;
+    const ctx=c.getContext("2d");
+    ctx.drawImage(img,0,0,W,H);
+    const {items,dot,dot2}=pfCompute();
+    ctx.fillStyle="#000"; ctx.textBaseline="middle";
+    ctx.font=Math.round(W*0.0148)+'px "Times New Roman", Georgia, serif';
+    items.forEach(it=>{ ctx.textAlign=(it.a==="l")?"left":"center"; ctx.fillText(it.t, it.x/100*W, it.y/100*H); });
+    [dot,dot2].forEach(pt=>{ if(pt){ ctx.beginPath(); ctx.fillStyle=pt.color; ctx.arc(pt.x/100*W, pt.y/100*H, W*0.008, 0, Math.PI*2); ctx.fill(); } });
+    const reg=(document.getElementById("m_reg").value||"C172");
+    const date=(document.getElementById("m_date").value||"");
+    const name="WB_"+reg+(date?"_"+date:"")+".jpg";
+    const dl=(url,revoke)=>{ const a=document.createElement("a"); a.download=name; a.href=url; a.target="_blank";
+      document.body.appendChild(a); a.click(); a.remove(); if(revoke) setTimeout(()=>URL.revokeObjectURL(url),4000); };
+    try{
+      if(c.toBlob){ c.toBlob(b=>{ if(b) dl(URL.createObjectURL(b),true); else dl(c.toDataURL("image/jpeg",0.92)); }, "image/jpeg", 0.92); }
+      else dl(c.toDataURL("image/jpeg",0.92));
+    }catch(e){ alert("Could not export JPEG: "+e.message); }
+  };
+  if(img && img.complete && img.naturalWidth) render();
+  else if(img){ img.addEventListener("load", render, {once:true}); }
+}
 
 /* ---------- Init ---------- */
 buildRegOptions(); buildStations();
