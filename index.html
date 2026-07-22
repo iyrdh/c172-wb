@@ -80,6 +80,9 @@
   .stn .name{ flex:1; min-width:0; }
   .stn .name b{ font-size:15px; font-weight:600; }
   .stn .name small{ display:block; font-size:11px; color:var(--muted); }
+  .stn .name .nameinp{ display:block; width:100%; max-width:190px; margin-top:4px; font-size:13px;
+    padding:6px 8px; border:1px solid #c4ccdb; border-radius:8px; background:#fff; font-family:inherit; }
+  .stn .name .nameinp:focus{ outline:none; border-color:var(--navy); box-shadow:0 0 0 2px rgba(44,62,107,.12); }
   .stn .wbox{ width:170px; flex:none; display:flex; gap:6px; }
   .stn .wbox .u{ position:relative; flex:1; min-width:0; }
   .stn .wbox input{ text-align:right; padding:11px 23px 11px 6px; font-weight:600; width:100%; }
@@ -271,7 +274,7 @@
     </div>
     <div class="actions">
       <button onclick="resetForm()">Reset</button>
-      <button onclick="saveJpeg()">Save JPEG</button>
+      <button onclick="exportImage()">Save / Share Image</button>
       <button class="primary" onclick="printForm()">Print / PDF</button>
     </div>
     <p class="foot">
@@ -436,10 +439,10 @@ const TYPE_SPEC = {
 const LB_PER_KG=2.20462262, FUEL_LB_PER_GAL=6, FUEL_MAX_GAL=53;
 const STATIONS=[
   {id:"bew",  name:"Basic Empty Wt", sub:"from aircraft", arm:0, locked:true},
-  {id:"pilot",name:"Pilot",          sub:"front 37.0″", arm:37},
-  {id:"copil",name:"Co-Pilot",       sub:"front 37.0″", arm:37},
-  {id:"rear1",name:"Rear Seat 1",    sub:"73.0″",       arm:73},
-  {id:"rear2",name:"Rear Seat 2",    sub:"73.0″",       arm:73},
+  {id:"pilot",name:"Pilot",          sub:"front 37.0″", arm:37, who:true},
+  {id:"copil",name:"Co-Pilot",       sub:"front 37.0″", arm:37, who:true},
+  {id:"rear1",name:"Rear Seat 1",    sub:"73.0″",       arm:73, who:true},
+  {id:"rear2",name:"Rear Seat 2",    sub:"73.0″",       arm:73, who:true},
   {id:"bag1", name:"Baggage #1",     sub:"max 120 lb · 95.0″", arm:95},
   {id:"bag2", name:"Baggage #2",     sub:"max 60 lb · 123.0″", arm:123},
 ];
@@ -458,7 +461,7 @@ function buildStations(){
   STATIONS.forEach(s=>{
     const ro=s.locked?'readonly':'';
     h+=`<div class="stn">
-      <div class="name"><b>${s.name}</b><small>${s.sub}</small></div>
+      <div class="name"><b>${s.name}</b>${s.who?`<input class="nameinp" id="nm_${s.id}" placeholder="name (optional)">`:`<small>${s.sub}</small>`}</div>
       <div class="wbox">
         <div class="u"><input id="kg_${s.id}" inputmode="decimal" ${ro} placeholder="0"><span class="unit">kg</span></div>
         <div class="u"><input id="w_${s.id}" inputmode="decimal" ${ro} placeholder="0"><span class="unit">lb</span></div>
@@ -492,6 +495,7 @@ function buildStations(){
     lb.addEventListener("input",()=>{ kg.value = lb.value===""?"":fmtIn(parseFloat(lb.value)/LB_PER_KG); recalc(); saveState(); });
   });
   document.getElementById("fuel_gal").addEventListener("input",()=>{ recalc(); saveState(); });
+  document.querySelectorAll("#stations .nameinp").forEach(i=>i.addEventListener("input", saveState));
 }
 function fmtIn(x){ return isNaN(x)?"":(Math.round(x*10)/10); }
 
@@ -607,7 +611,7 @@ function landingState(totW, totM){
   const burnLb = landingBurnGal()*FUEL_LB_PER_GAL;
   if(!(burnLb>0) || !(totW>0)) return null;
   const w = totW - burnLb, m = totM - burnLb*48;
-  return { w, cg: w>0? m/w : 0, burnLb };
+  return { w, m, cg: w>0? m/w : 0, burnLb };
 }
 
 /* ---------- Chart ---------- */
@@ -654,6 +658,7 @@ function saveState(){
   try{ localStorage.setItem("c172wb", JSON.stringify({
     reg:document.getElementById("m_reg").value, category,
     loads:Object.fromEntries(STATIONS.filter(s=>!s.locked).map(s=>[s.id, document.getElementById("w_"+s.id).value])),
+    names:Object.fromEntries(STATIONS.filter(s=>s.who).map(s=>[s.id, (document.getElementById("nm_"+s.id)||{}).value||""])),
     fuel:document.getElementById("fuel_gal").value
   })); }catch(e){}
 }
@@ -662,6 +667,7 @@ function loadState(){
     if(d.reg && AIRCRAFT[d.reg]){ document.getElementById("m_reg").value=d.reg; onRegChange(); if(d.category) setCategory(d.category,true); }
     if(d.loads) Object.entries(d.loads).forEach(([k,v])=>{ const el=document.getElementById("w_"+k);
       if(el){ el.value=v; const kg=document.getElementById("kg_"+k); if(kg) kg.value=(v===""||v==null)?"":fmtIn(parseFloat(v)/LB_PER_KG); } });
+    if(d.names) Object.entries(d.names).forEach(([k,v])=>{ const e=document.getElementById("nm_"+k); if(e) e.value=v||""; });
     if(d.fuel) document.getElementById("fuel_gal").value=d.fuel;
   }catch(e){}
 }
@@ -955,12 +961,13 @@ function pfChartY(w){ return PF_CHART.y1500 + (w-1500)/(2600-1500)*(PF_CHART.y26
 function pfCompute(){
   const V=id=>{const e=document.getElementById(id);return e?e.value:"";};
   const items=[];
-  const P=(t,x,y,a)=>{ if(t!=null && t!=="") items.push({t:String(t),x,y,a:a||"c"}); };
+  const P=(t,x,y,a,c)=>{ if(t!=null && t!=="") items.push({t:String(t),x,y,a:a||"c",c:c||"#000"}); };
   P(V("m_date"),11.0,14.25); P(V("m_mission"),32.5,14.25); P(V("m_reg"),79.0,14.25);
   P(V("m_sortie"),26.0,16.35,"l");
   let totW=0, totM=0;
   STATIONS.forEach(s=>{
     const w=num("w_"+s.id), a=(s.id==="bew")?bewArm:s.arm, m=w*a, y=PF_ROWY[s.id];
+    if(s.who){ const nm=(document.getElementById("nm_"+s.id)||{}).value; if(nm) P(nm, 22.0, y, "l"); }
     if(w){ P(fmt(w/LB_PER_KG,1),PF_COL.kg,y); P(fmt(w,1),PF_COL.lbs,y); P(fmt(a,2),PF_COL.arm,y); P(fmt(m,1),PF_COL.mom,y); }
     totW+=w; totM+=m;
   });
@@ -979,9 +986,14 @@ function pfCompute(){
   }
   let dot2=null;
   const land=landingState(totW,totM);
-  if(land && land.cg>=34 && land.cg<=48 && land.w>=1500 && land.w<=2600){
-    const inside=pointInPolygon([land.cg,land.w],spec().envelope[category]) && land.w<=spec().maxW[category];
-    dot2={ x:pfChartX(land.cg), y:pfChartY(land.w), color:inside?"#1f6fb2":"#e67e22" };
+  if(land){
+    const bl="#1f6fb2";
+    P("LANDING WEIGHT (estimated at destination)", 50, 48.9, "c", bl);
+    P(`${fmt(land.w,1)} lb    ·    Moment ${fmt(land.m,1)}    ·    C.G. ${fmt(land.cg,2)}″    ·    burn-off −${fmt(land.burnLb,1)} lb`, 50, 50.7, "c", bl);
+    if(land.cg>=34 && land.cg<=48 && land.w>=1500 && land.w<=2600){
+      const inside=pointInPolygon([land.cg,land.w],spec().envelope[category]) && land.w<=spec().maxW[category];
+      dot2={ x:pfChartX(land.cg), y:pfChartY(land.w), color:inside?"#1f6fb2":"#e67e22" };
+    }
   }
   return {items,dot,dot2};
 }
@@ -991,7 +1003,7 @@ function fillPrintForm(){
   const {items,dot,dot2}=pfCompute();
   items.forEach(it=>{
     const e=document.createElement("span"); e.className="ov"; e.textContent=it.t;
-    e.style.left=it.x+"%"; e.style.top=it.y+"%";
+    e.style.left=it.x+"%"; e.style.top=it.y+"%"; e.style.color=it.c||"#000";
     e.style.transform=(it.a==="l")?"translateY(-50%)":"translate(-50%,-50%)";
     sheet.appendChild(e);
   });
@@ -1001,8 +1013,8 @@ function fillPrintForm(){
 function printForm(){ fillPrintForm(); window.print(); }
 window.addEventListener("beforeprint", fillPrintForm);
 
-/* render the filled form to a canvas and download it as a JPEG */
-function saveJpeg(){
+/* render the filled form to a high-res PNG, then share (mobile) or download */
+function exportImage(){
   const img=document.querySelector("#pfsheet .pf-bg");
   const render=()=>{
     const W=img.naturalWidth||2244, H=img.naturalHeight||2904;
@@ -1010,19 +1022,29 @@ function saveJpeg(){
     const ctx=c.getContext("2d");
     ctx.drawImage(img,0,0,W,H);
     const {items,dot,dot2}=pfCompute();
-    ctx.fillStyle="#000"; ctx.textBaseline="middle";
+    ctx.textBaseline="middle";
     ctx.font=Math.round(W*0.0148)+'px "Times New Roman", Georgia, serif';
-    items.forEach(it=>{ ctx.textAlign=(it.a==="l")?"left":"center"; ctx.fillText(it.t, it.x/100*W, it.y/100*H); });
+    items.forEach(it=>{ ctx.fillStyle=it.c||"#000"; ctx.textAlign=(it.a==="l")?"left":"center"; ctx.fillText(it.t, it.x/100*W, it.y/100*H); });
     [dot,dot2].forEach(pt=>{ if(pt){ ctx.beginPath(); ctx.fillStyle=pt.color; ctx.arc(pt.x/100*W, pt.y/100*H, W*0.008, 0, Math.PI*2); ctx.fill(); } });
     const reg=(document.getElementById("m_reg").value||"C172");
     const date=(document.getElementById("m_date").value||"");
-    const name="WB_"+reg+(date?"_"+date:"")+".jpg";
-    const dl=(url,revoke)=>{ const a=document.createElement("a"); a.download=name; a.href=url; a.target="_blank";
-      document.body.appendChild(a); a.click(); a.remove(); if(revoke) setTimeout(()=>URL.revokeObjectURL(url),4000); };
+    const name="WB_"+reg+(date?"_"+date:"")+".png";
+    const finish=(blob)=>{
+      if(!blob){ alert("Could not create image."); return; }
+      const file=new File([blob], name, {type:"image/png"});
+      /* mobile: native share sheet (Save to Photos / Files / send) */
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file], title:"C-172 W&B — "+reg}).catch(()=>{});
+      } else {
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement("a"); a.download=name; a.href=url;
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+      }
+    };
     try{
-      if(c.toBlob){ c.toBlob(b=>{ if(b) dl(URL.createObjectURL(b),true); else dl(c.toDataURL("image/jpeg",0.92)); }, "image/jpeg", 0.92); }
-      else dl(c.toDataURL("image/jpeg",0.92));
-    }catch(e){ alert("Could not export JPEG: "+e.message); }
+      if(c.toBlob) c.toBlob(finish,"image/png");
+      else { const a=document.createElement("a"); a.download=name; a.href=c.toDataURL("image/png"); a.click(); }
+    }catch(e){ alert("Could not export image: "+e.message); }
   };
   if(img && img.complete && img.naturalWidth) render();
   else if(img){ img.addEventListener("load", render, {once:true}); }
