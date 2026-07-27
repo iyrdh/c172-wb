@@ -197,11 +197,54 @@
        border-radius:10px; font-size:12.5px; margin:2px 2px 10px; line-height:1.4; }
   .cat-toggle.compact button{ padding:8px 9px; font-size:13px; }
 
+  /* ---- Nav Log spreadsheet (white & blue) ---- */
+  .navscroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:12px; background:#fff;
+        border:1px solid var(--line); padding:6px; }
+  .navtbl{ border-collapse:collapse; font-size:12px; min-width:1180px; width:100%; background:#fff; }
+  .navtbl th,.navtbl td{ border:1px solid var(--line); padding:4px; text-align:center; }
+  .navtbl thead th{ background:var(--navy); font-size:10px; font-weight:700; color:#fff; line-height:1.18; padding:8px 4px; vertical-align:middle; }
+  /* input cells = white boxes (user enters) */
+  .navtbl td input{ width:58px; border:1px solid #c4ccdb; background:#fff; text-align:center; font-size:13px;
+        padding:10px 3px; font-family:inherit; color:var(--ink); border-radius:8px; }
+  .navtbl td input.cpname{ width:100px; }
+  .navtbl td input::placeholder{ color:#aab2c0; }
+  .navtbl td input:focus{ outline:none; border-color:var(--navy); box-shadow:0 0 0 2px rgba(44,62,107,.15); }
+  /* calculated cells = light-blue boxes (app fills) */
+  .navtbl td.calc{ background:transparent; padding:4px; }
+  .navtbl td.calc .cbox{ display:block; min-width:52px; background:#eef1f6; border:1px solid #d7deea;
+        border-radius:8px; padding:10px 3px; font-weight:700; color:var(--navy); font-size:13px; }
+  .navtbl tfoot td{ background:#eef1f6; font-weight:800; color:var(--ink); padding:9px 4px; }
+  .navtbl tfoot td.calc{ color:var(--navy); }
+  /* Fuel Cap input tucked into the Fuel Rem. header */
+  .fuelcap-h{ margin-top:5px; }
+  .fuelcap-h input{ width:70px; border:1px solid #c4ccdb; background:#fff; color:var(--ink); border-radius:6px;
+        padding:6px 4px; text-align:center; font-family:inherit; font-size:13px; font-weight:700; cursor:default; }
+  .fuelcap-h input:focus{ outline:none; }
+  /* full-width Add New Line + subtle remove */
+  .navaddbtn{ display:block; width:100%; margin:14px 0 6px; padding:16px; border:none; border-radius:11px;
+        background:var(--navy); color:#fff; font-weight:700; font-size:16px; font-family:inherit; cursor:pointer; }
+  .navaddbtn:hover{ background:var(--navy2); }
+  .navdelbtn{ display:block; margin:0 auto 4px; background:transparent; border:none; color:var(--muted);
+        font-size:13px; font-family:inherit; cursor:pointer; padding:6px 10px; }
+  .navdelbtn:hover{ color:var(--bad); }
+  /* Nav Log fuel-calculation cards */
+  .nlfuel{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  @media (min-width:820px){ .nlfuel{ grid-template-columns:repeat(3,1fr); } }
+  .nlfuel .cell{ background:var(--field); border:1px solid var(--line); border-radius:11px; padding:10px 13px; }
+  .nlfuel .cell .k{ font-size:12px; color:var(--muted); font-weight:600; }
+  .nlfuel .cell .v{ font-size:20px; font-weight:800; color:var(--ink); line-height:1.15; }
+  .nlfuel .cell .v small{ font-size:12px; font-weight:600; color:var(--muted); }
+  .nlfuel .cell.total{ grid-column:1/-1; background:#fff; border:2px solid var(--navy);
+        display:flex; align-items:baseline; justify-content:space-between; }
+  .nlfuel .cell.total .k{ color:var(--navy); font-size:13px; text-transform:uppercase; letter-spacing:.5px; }
+  .nlfuel .cell.total .v{ color:var(--navy); font-size:24px; }
+  .nlfuel .cell.total .v small{ color:var(--muted); }
+
   /* ============ PRINT FORMS — exact form images + overlaid values ============ */
-  #printform, #perfform{ display:none; }
-  #pfsheet, #perfsheet{ position:relative; width:100%; }
-  #pfsheet .pf-bg, #perfsheet .pf-bg{ display:block; width:100%; height:auto; }
-  #pfsheet .ov, #perfsheet .ov{ position:absolute; font-family:"Times New Roman",Georgia,serif; color:#000;
+  #printform, #perfform, #navform{ display:none; }
+  #pfsheet, #perfsheet, #navsheet{ position:relative; width:100%; }
+  #pfsheet .pf-bg, #perfsheet .pf-bg, #navsheet .pf-bg{ display:block; width:100%; height:auto; }
+  #pfsheet .ov, #perfsheet .ov, #navsheet .ov{ position:absolute; font-family:"Times New Roman",Georgia,serif; color:#000;
     white-space:nowrap; line-height:1; }
   #pfsheet .ovdot{ position:absolute; width:1.6%; padding-bottom:1.6%; height:0;
     border-radius:50%; transform:translate(-50%,-50%); }
@@ -212,8 +255,11 @@
     body[data-print="wb"] #pfsheet, body[data-print="wb"] #pfsheet .pf-bg{ width:8.5in; height:11in; }
     body[data-print="perf"] #perfform{ display:block !important; }
     body[data-print="perf"] #perfsheet, body[data-print="perf"] #perfsheet .pf-bg{ width:210mm; height:297mm; }
+    body[data-print="nav"] #navform{ display:block !important; }
+    body[data-print="nav"] #navsheet, body[data-print="nav"] #navsheet .pf-bg{ width:210mm; height:297mm; }
     #pfsheet .ov{ font-size:9.5pt; }
     #perfsheet .ov{ font-size:9pt; }
+    #navsheet .ov{ font-size:7.5pt; }
   }
 </style>
 </head>
@@ -226,8 +272,9 @@
   </header>
 
   <div class="tabs">
-    <button id="tabWb" class="active" onclick="setTab('wb')">Weight &amp; Balance</button>
+    <button id="tabWb" class="active" onclick="setTab('wb')">W&amp;B</button>
     <button id="tabPerf" onclick="setTab('perf')">Performance</button>
+    <button id="tabNav" onclick="setTab('nav')">Nav Log</button>
   </div>
 
   <div id="page-wb" class="page">
@@ -342,8 +389,8 @@
         <div class="i"><input id="pf_gph" inputmode="decimal" placeholder="8.5"><span class="u">gph</span></div></div>
       <div class="prow"><div class="l">Cruise groundspeed</div>
         <div class="i"><input id="pf_gs" inputmode="decimal" placeholder="110"><span class="u">kt</span></div></div>
-      <div class="prow"><div class="l">Taxi fuel</div>
-        <div class="i"><input id="pf_taxi" inputmode="decimal" placeholder="1.1"><span class="u">gal</span></div></div>
+      <div class="prow"><div class="l">Taxi fuel<small>C-172 typical 1.4 gal</small></div>
+        <div class="i"><input id="pf_taxi" inputmode="decimal" placeholder="1.4"><span class="u">gal</span></div></div>
       <div class="prow"><div class="l">Trip input<small>distance, fuel, or time</small></div>
         <div class="cat-toggle compact"><button id="pfTripDist" class="active" onclick="setTripMode('dist')">nm</button><button id="pfTripGal" onclick="setTripMode('gal')">gal</button><button id="pfTripTime" onclick="setTripMode('time')">min</button></div></div>
       <div class="prow"><div class="l"><span id="pf_trip_lmain">Trip distance</span></div>
@@ -396,6 +443,48 @@
   </div>
   </div>
   </div><!-- /page-perf -->
+
+  <!-- ============ NAV LOG PAGE ============ -->
+  <div id="page-nav" class="page" hidden>
+  <section>
+    <div class="sechead">Fuel calculation</div>
+    <div class="nlfuel">
+      <div class="cell"><div class="k">Taxi Fuel</div><div class="v"><span id="nl_ftaxi">—</span> <small>gal</small></div></div>
+      <div class="cell"><div class="k">Trip Fuel</div><div class="v"><span id="nl_ftrip">—</span> <small>gal</small></div></div>
+      <div class="cell"><div class="k">Contingency</div><div class="v"><span id="nl_fcont">—</span> <small>gal</small></div></div>
+      <div class="cell"><div class="k">Final Reserve</div><div class="v"><span id="nl_fres">—</span> <small>gal</small></div></div>
+      <div class="cell"><div class="k">ALTN</div><div class="v"><span id="nl_falt">—</span> <small>gal</small></div></div>
+      <div class="cell"><div class="k">Fuel Cap (on board)</div><div class="v"><span id="nl_fcap">—</span> <small>gal</small></div></div>
+      <div class="cell total"><div class="k">Total required</div><div class="v"><span id="nl_ftot">—</span> <small>gal</small></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">Nav Log — legs
+      <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;text-transform:none;letter-spacing:0;font-weight:600;color:var(--muted)">Mag Var
+        <span class="cat-toggle compact"><button id="nlVarE" class="active" onclick="setNavVar('E')">E</button><button id="nlVarW" onclick="setNavVar('W')">W</button></span>
+      </span>
+    </div>
+    <div class="navscroll">
+      <table class="navtbl">
+        <thead><tr>
+          <th>Check<br>Point<br>Name</th>
+          <th>True<br>Course</th><th>Alt.</th><th>True<br>Air Spd</th><th>True<br>Wind Dir</th><th>Wind<br>Spd</th>
+          <th>Wind<br>Corr.<br>Ang.</th><th>True<br>Hdg</th><th>Mag<br>Var</th><th>Mag<br>Hdg</th><th>Mag<br>Dev</th><th>Comps<br>Hdg</th>
+          <th>Dist</th><th>Grnd<br>Spd</th><th>Time</th><th>Fuel<br>Per<br>Hour</th><th>Fuel<br>Used</th><th>Fuel<br>Rem.<div class="fuelcap-h"><input id="nl_fcap_in" inputmode="decimal" readonly tabindex="-1" title="Usable fuel at start of legs = fuel on board − taxi fuel (auto-synced from the Performance fuel plan)"></div></th>
+        </tr></thead>
+        <tbody id="nl_rows"></tbody>
+        <tfoot><tr>
+          <td colspan="12" style="text-align:right;padding-right:8px;font-weight:700">Totals →</td>
+          <td class="calc" id="nl_totd">0.00</td><td></td><td class="calc" id="nl_tott">0</td><td></td><td class="calc" id="nl_totf">0.00</td><td class="calc" id="nl_totrem">0.00</td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <button class="navaddbtn" onclick="navAddLeg()">Add New Line</button>
+    <button class="navdelbtn" onclick="navDelLeg()">− Remove last line</button>
+  </section>
+  <p class="foot">Per-leg wind triangle — WCA = asin(WS·sin(WindDir−TC)/TAS); True Hdg = TC + WCA; Mag Hdg = TH ± Var (E−/W+, set in the header); Compass Hdg = MH + Dev; GS = TAS·cosWCA − WS·cos(WindDir−TC); Time = Dist÷GS×60. Fuel Per Hour is taken from the Performance fuel plan (cruise fuel flow); Fuel Used = FPH × leg time, and Fuel Rem. runs down from the Fuel Cap box (fuel on board − taxi fuel). Verify against your ops manual.</p>
+  </div><!-- /page-nav -->
 </div>
 
 <!-- Sticky results -->
@@ -419,6 +508,12 @@
   <div id="perfsheet">
     <img src="perf-form.jpg" class="pf-bg" alt="Aircraft Performance Data form">
     <!-- overlay values are injected & positioned by fillPerfForm() -->
+  </div>
+</div>
+<div id="navform">
+  <div id="navsheet">
+    <img src="nav-form.jpg" class="pf-bg" alt="BAC Navigation Log">
+    <!-- overlay values are injected & positioned by fillNavForm() -->
   </div>
 </div>
 
@@ -549,7 +644,7 @@ function applyEmptyWeight(){
 }
 
 /* ---------- Calc ---------- */
-function num(id){ const v=parseFloat(document.getElementById(id).value); return isNaN(v)?0:v; }
+function num(id){ const e=document.getElementById(id); const v=e?parseFloat(e.value):NaN; return isNaN(v)?0:v; }
 function fmt(n,d=1){ return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
 
 function recalc(){
@@ -596,6 +691,7 @@ function recalc(){
   wbW=totW; wbM=totM; wbCG=cg; wbHas=totW>0;
   refreshLanding();
   syncPerf(totW, num("fuel_gal"));
+  syncNav();
 }
 /* last W&B totals, so the Performance tab can refresh the landing point */
 let wbW=0, wbM=0, wbCG=0, wbHas=false;
@@ -719,11 +815,14 @@ function setTxt(id,v){ const e=document.getElementById(id); if(e) e.textContent=
 function setTab(t){
   document.getElementById("page-wb").hidden = (t!=="wb");
   document.getElementById("page-perf").hidden = (t!=="perf");
+  document.getElementById("page-nav").hidden = (t!=="nav");
   document.getElementById("tabWb").classList.toggle("active", t==="wb");
   document.getElementById("tabPerf").classList.toggle("active", t==="perf");
+  document.getElementById("tabNav").classList.toggle("active", t==="nav");
   document.getElementById("wbResultbar").style.display = (t==="wb")?"":"none";
   try{ localStorage.setItem("c172tab", t); }catch(e){}
   if(t==="perf") calcPerf();
+  if(t==="nav") navCalc();
 }
 function setPerfType(t){ perfType=t; updatePerfTypeButtons(); calcPerf(); savePerf(); }
 function updatePerfTypeButtons(){
@@ -946,6 +1045,7 @@ function calcPerf(){
   }
   const dn=document.getElementById("pf_distnote"); if(dn){ dn.textContent=n; dn.style.whiteSpace="pre-line"; }
   refreshLanding();   /* trip/taxi fuel affects landing weight on the W&B chart */
+  syncNav();
 }
 const PERF_FIELDS=["pf_elev","pf_qnh","pf_oat","pf_rwy","pf_wdir","pf_wspd","pf_gph","pf_gs","pf_taxi","pf_trip","pf_altd","pf_rwyuse","pf_rwylen","pf_avbl","pf_glidealt","pf_remark"];
 function savePerf(){ try{ const o={type:perfType,grass:perfGrass,qnhUnit,tofFlap,ldgFlap,tripMode,contMode}; PERF_FIELDS.forEach(f=>o[f]=document.getElementById(f).value); localStorage.setItem("c172perf",JSON.stringify(o)); }catch(e){} }
@@ -1036,11 +1136,199 @@ function setPageSize(s){ let el=document.getElementById("pageSizeStyle"); if(!el
 function printForm(){ document.body.dataset.print="wb"; setPageSize("letter portrait"); fillPrintForm(); window.print(); }
 function printPerfForm(){ document.body.dataset.print="perf"; setPageSize("A4 portrait"); fillPerfForm(); window.print(); }
 window.addEventListener("beforeprint", ()=>{
+  const nav = !document.getElementById("page-nav").hidden;
   const perf = !document.getElementById("page-perf").hidden;
-  document.body.dataset.print = perf ? "perf" : "wb";
-  setPageSize(perf ? "A4 portrait" : "letter portrait");
-  if(perf) fillPerfForm(); else fillPrintForm();
+  const target = nav ? "nav" : perf ? "perf" : "wb";
+  document.body.dataset.print = target;
+  setPageSize(target==="wb" ? "letter portrait" : "A4 portrait");
+  if(target==="nav") fillNavForm(); else if(target==="perf") fillPerfForm(); else fillPrintForm();
 });
+
+/* ---------- Nav Log (overlay onto nav-form.jpg) ---------- */
+const NAV_FIELDS=[];
+const NAV_GLOB=[];
+let navLegN=4, navVar="E";
+function nlv(id){ const e=document.getElementById(id); return e?e.value:""; }
+const NAV_LEGKEYS=["tc","alt","tas","wdir","wspd","magvar","magdev","cp","dist"];
+function norm360(x){ return ((x%360)+360)%360; }
+function saveNav(){ try{
+  const o={navLegN,navVar};
+  NAV_FIELDS.concat(NAV_GLOB,["nl_fcap_in"]).forEach(f=>o[f]=nlv(f));
+  o.legs=[]; for(let i=1;i<=navLegN;i++){ const r={}; NAV_LEGKEYS.forEach(k=>r[k]=nlv("nlx_"+i+"_"+k)); o.legs.push(r); }
+  localStorage.setItem("c172nav",JSON.stringify(o));
+}catch(e){} }
+function loadNav(){ try{ const o=JSON.parse(localStorage.getItem("c172nav")||"null"); if(!o){ renderNavRows(); return; }
+  if(o.navLegN) navLegN=Math.max(1,Math.min(20,o.navLegN));
+  if(o.navVar) navVar=o.navVar;
+  NAV_FIELDS.concat(NAV_GLOB,["nl_fcap_in"]).forEach(f=>{ const e=document.getElementById(f); if(e&&o[f]!=null) e.value=o[f]; });
+  renderNavRows();
+  if(o.legs) o.legs.forEach((lg,idx)=>{ const i=idx+1; NAV_LEGKEYS.forEach(k=>{ const e=document.getElementById("nlx_"+i+"_"+k); if(e&&lg[k]!=null) e.value=lg[k]; }); });
+  document.getElementById("nlVarE").classList.toggle("active",navVar==="E");
+  document.getElementById("nlVarW").classList.toggle("active",navVar==="W");
+}catch(e){} }
+/* wind triangle: TC, TAS, wind dir (from), wind velocity -> true heading, groundspeed, WCA */
+function windTri(tc,tas,wd,wv){
+  if(!(tas>0)) return {th:tc,gs:0,wca:0};
+  const wa=(wd-tc)*Math.PI/180; let s=(wv/tas)*Math.sin(wa); s=Math.max(-1,Math.min(1,s));
+  const wca=Math.asin(s);
+  return {th:((tc+wca*180/Math.PI)%360+360)%360, gs:Math.max(0,tas*Math.cos(wca)-wv*Math.cos(wa)), wca:wca*180/Math.PI};
+}
+function renderNavRows(){
+  const host=document.getElementById("nl_rows"); if(!host) return;
+  const keep={}; host.querySelectorAll("input").forEach(i=>keep[i.id]=i.value);
+  let h="";
+  for(let i=1;i<=navLegN;i++){
+    const inp=k=>`<td><input id="nlx_${i}_${k}" inputmode="decimal"></td>`;
+    const cal=k=>`<td class="calc"><span class="cbox" id="nlc_${i}_${k}">—</span></td>`;
+    h+="<tr>"+`<td><input class="cpname" id="nlx_${i}_cp"></td>`
+      +inp("tc")+inp("alt")+inp("tas")+inp("wdir")+inp("wspd")
+      +cal("wca")+cal("th")+inp("magvar")+cal("mh")+inp("magdev")+cal("ch")
+      +inp("dist")+cal("gs")+cal("time")+cal("fph")+cal("fused")+cal("frem")+"</tr>";
+  }
+  host.innerHTML=h;
+  Object.entries(keep).forEach(([k,v])=>{ const e=document.getElementById(k); if(e) e.value=v; });
+  host.querySelectorAll("input").forEach(i=>i.addEventListener("input",()=>{ navCalc(); saveNav(); }));
+}
+function navAddLeg(){ if(navLegN>=20) return; navLegN++; renderNavRows();
+  const i=navLegN, prev=i-1;
+  /* pre-fill a new leg from the leg above so cruise values carry down */
+  if(prev>=1) ["tas","wdir","wspd","magvar","magdev"].forEach(k=>{ const cur=document.getElementById("nlx_"+i+"_"+k); if(cur&&!cur.value) cur.value=nlv("nlx_"+prev+"_"+k); });
+  navCalc(); saveNav();
+}
+function navDelLeg(){ if(navLegN>1){ navLegN--; renderNavRows(); navCalc(); saveNav(); } }
+function setNavVar(e){ navVar=e; document.getElementById("nlVarE").classList.toggle("active",e==="E"); document.getElementById("nlVarW").classList.toggle("active",e==="W"); navCalc(); saveNav(); }
+function navCalc(){
+  const vs=(navVar==="W")?1:-1;   /* West adds, East subtracts */
+  const fuelCap=num("nl_fcap_in");
+  const fph=num("pf_gph");        /* Fuel Per Hour comes from the Performance fuel plan (cruise fuel flow) */
+  let running=fuelCap, totD=0,totT=0,totF=0;   /* Fuel Cap box already = fuel on board − taxi fuel */
+  for(let i=1;i<=navLegN;i++){
+    const g=k=>num("nlx_"+i+"_"+k), c=k=>document.getElementById("nlc_"+i+"_"+k);
+    if(!c("th")) continue;
+    const tc=g("tc"),tas=g("tas"),wd=g("wdir"),ws=g("wspd"),mv=g("magvar"),md=g("magdev"),dist=g("dist");
+    const {th,gs,wca}=windTri(tc,tas,wd,ws);
+    const mh=norm360(th+vs*mv), ch=norm360(mh+md);
+    const time=gs>0?dist/gs*60:0, fused=fph*time/60, has=(tc||tas||ws||dist);
+    c("wca").textContent = (tas>0&&ws>0)? ((wca>=0?"+":"")+fmt(wca,0)+"°") : "—";
+    c("th").textContent  = has? fmt(th,0)+"°":"—";
+    c("mh").textContent  = has? fmt(mh,0)+"°":"—";
+    c("ch").textContent  = has? fmt(ch,0)+"°":"—";
+    c("gs").textContent  = gs>0? fmt(gs,0):"—";
+    c("time").textContent= time>0? fmt(time,0):"—";
+    c("fph").textContent = fph>0? fmt(fph,1):"—";
+    c("fused").textContent=(fph>0&&time>0)? fmt(fused,2):"—";
+    running-=fused;
+    c("frem").textContent=(fuelCap>0)? fmt(running,2):"—";
+    totD+=dist; totT+=time; totF+=fused;
+  }
+  setTxt("nl_totd", fmt(totD,2));
+  setTxt("nl_tott", fmt(totT,0));
+  setTxt("nl_totf", fmt(totF,2));
+  setTxt("nl_totrem", fuelCap>0? fmt(running,2):"0.00");
+  syncNav();
+}
+function syncNav(){
+  if(!document.getElementById("page-nav") || document.getElementById("page-nav").hidden) return;
+  const d=perfSnapshot();
+  const g=(id,v)=> setTxt(id, d.gph>0? fmt(v,2):"—");
+  g("nl_ftaxi",d.taxi); g("nl_ftrip",d.tripFuel); g("nl_fcont",d.contFuel); g("nl_fres",d.resFuel); g("nl_falt",d.altFuel);
+  setTxt("nl_fcap", d.onboard>0? fmt(d.onboard,2):"—"); g("nl_ftot",d.total);
+  /* Fuel Cap box shows the already-calculated usable start: fuel on board − taxi fuel */
+  const fc=document.getElementById("nl_fcap_in"); if(fc && document.activeElement!==fc && d.onboard>0) fc.value=String(Math.max(0,Math.round((d.onboard-d.taxi)*10)/10));
+}
+/* computed leg data (shared by on-screen calc & the form grid) */
+function navLegData(){
+  const vs=(navVar==="W")?1:-1;
+  const fph=num("pf_gph");   /* Fuel Per Hour from the Performance fuel plan */
+  const legs=[];
+  for(let i=1;i<=navLegN;i++){
+    const g=k=>num("nlx_"+i+"_"+k);
+    const cp=nlv("nlx_"+i+"_cp"), tc=g("tc"),tas=g("tas"),wd=g("wdir"),wv=g("wspd"),varMag=g("magvar"),dev=g("magdev"),dist=g("dist"),alt=g("alt");
+    if(!(tc||dist||cp)){ legs.push(null); continue; }
+    const {th,gs,wca}=windTri(tc,tas,wd,wv);
+    const mh=norm360(th+vs*varMag), ch=norm360(mh+dev);
+    const ete=gs>0?dist/gs*60:0, fuel=ete/60*fph;
+    legs.push({cp,tc,wca,th,mh,ch,dist,gs,ete,fuel,varMag,dev,vs,wd,wv,tas,alt});
+  }
+  return legs;
+}
+/* nav form leg grid: first leg-row centre & row height (image %); each leg spans 2 sub-rows */
+const NAV_ROWY0=46.74, NAV_ROWH=4.45;
+function pfComputeNav(){
+  const V=id=>{const e=document.getElementById(id);return e?e.value:"";};
+  const d=perfSnapshot(), items=[];
+  const P=(t,x,y)=>{ if(t!=null&&t!=="") items.push({t:String(t),x,y,a:"l",c:"#000"}); };
+  const reg=V("m_reg").replace(/^HS-?/i,"");            /* form has "HS -" preprinted */
+  P((document.getElementById("nm_pilot")||{}).value, 10.5, 2.55);  /* Student Pilot */
+  P(V("nl_instr"), 12.0, 3.75);                                    /* Instructor Pilot */
+  P(V("nl_dep"), 9.0, 5.35);                                       /* Departure */
+  P(V("nl_dest"), 9.5, 7.40);                                      /* Destination */
+  P(V("nl_patdep"), 41.0, 5.35);                                   /* Pattern alt dep */
+  P(V("nl_patdest"), 41.0, 7.40);                                  /* Pattern alt dest */
+  P(V("nl_tstart"), 58.0, 2.55);                                   /* Time start */
+  P(V("nl_tstop"), 58.0, 3.95);                                    /* Time stop */
+  P(V("nl_callsign"), 63.0, 5.35);                                 /* Call sign */
+  P(reg, 67.5, 7.40);                                              /* Aircraft Reg after HS- */
+  P(V("m_date"), 78.0, 3.4);                                       /* Date of flight */
+  P(V("nl_phase"), 89.0, 5.35);                                    /* Phase number */
+  if(d.gph>0){
+    P(fmt(d.taxi,1), 89.0, 16.51);
+    P(fmt(d.tripFuel,1), 89.0, 18.55);
+    P(fmt(d.contFuel,1), 89.0, 20.57);
+    P(fmt(d.resFuel,1), 89.0, 22.62);
+    P(fmt(d.altFuel,1), 89.0, 24.68);
+  }
+  if(d.onboard>0) P(fmt(d.onboard,1), 89.0, 26.70);                /* Fuel Cap = on board */
+  /* computed leg grid (first 7 legs fit the form) */
+  const legs=navLegData();
+  legs.forEach((lg,idx)=>{
+    if(!lg || idx>=7) return;
+    const y=NAV_ROWY0+idx*NAV_ROWH, top=y-1.11, bot=y+1.11;   /* leg spans 2 sub-rows */
+    P(lg.cp, 1.2, y);
+    if(lg.wv){ P(fmt(lg.wd,0), 34.6, top); P(fmt(lg.wv,0), 40.0, top); }
+    if(lg.tas) P(fmt(lg.tas,0), 45.6, bot);
+    if(lg.tc||lg.dist){
+      P(fmt(lg.tc,0), 51.0, top); P((lg.wca>=0?"+":"")+fmt(lg.wca,0), 51.0, bot);
+      P(fmt(lg.th,0), 56.4, top); P((lg.vs>0?"+":"−")+fmt(lg.varMag,0), 56.4, bot);
+      P(fmt(lg.mh,0), 61.9, top); P((lg.dev>=0?"+":"")+fmt(lg.dev,0), 61.9, bot);
+      P(fmt(lg.ch,0), 67.3, y);
+      P(fmt(lg.dist,0), 72.7, top);
+      P(fmt(lg.gs,0), 78.2, top);
+      P(fmt(lg.ete,0), 83.7, top);
+      P(fmt(lg.fuel,1), 94.6, top);
+    }
+  });
+  return {items};
+}
+function fillNavForm(){
+  const sheet=document.getElementById("navsheet");
+  sheet.querySelectorAll(".ov").forEach(e=>e.remove());
+  pfComputeNav().items.forEach(it=>{
+    const e=document.createElement("span"); e.className="ov"; e.textContent=it.t;
+    e.style.left=it.x+"%"; e.style.top=it.y+"%"; e.style.color=it.c||"#000"; e.style.transform="translateY(-50%)";
+    sheet.appendChild(e);
+  });
+}
+function printNavForm(){ document.body.dataset.print="nav"; setPageSize("A4 portrait"); fillNavForm(); window.print(); }
+function exportNavImage(){
+  const img=document.querySelector("#navsheet .pf-bg");
+  const render=()=>{
+    const W=img.naturalWidth||1422, H=img.naturalHeight||2090;
+    const c=document.createElement("canvas"); c.width=W; c.height=H;
+    const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,W,H);
+    ctx.textBaseline="middle"; ctx.textAlign="left"; ctx.font=Math.round(W*0.012)+'px "Times New Roman", Georgia, serif';
+    pfComputeNav().items.forEach(it=>{ ctx.fillStyle=it.c||"#000"; ctx.fillText(it.t, it.x/100*W, it.y/100*H); });
+    const reg=(document.getElementById("m_reg").value||"C172"), date=(document.getElementById("m_date").value||"");
+    const name="NAVLOG_"+reg+(date?"_"+date:"")+".png";
+    const finish=(blob)=>{ if(!blob){ alert("Could not create image."); return; }
+      const file=new File([blob],name,{type:"image/png"});
+      if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file],title:"BAC Nav Log — "+reg}).catch(()=>{}); }
+      else { const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.download=name; a.href=url; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000); } };
+    try{ if(c.toBlob) c.toBlob(finish,"image/png"); else { const a=document.createElement("a"); a.download=name; a.href=c.toDataURL("image/png"); a.click(); } }
+    catch(e){ alert("Could not export image: "+e.message); }
+  };
+  if(img && img.complete && img.naturalWidth) render(); else if(img){ img.addEventListener("load", render, {once:true}); }
+}
 
 /* ---------- Performance sheet (overlay onto perf-form.jpg) ---------- */
 function hasVal(id){ const e=document.getElementById(id); return e && e.value!==""; }
@@ -1056,7 +1344,9 @@ function perfSnapshot(){
   const ldChart=perfDistance(perfType,"landing",wt,pa,oat);
   const toShort=applyCorrections(toChart,"takeoff",hw,perfGrass);
   const toNormal=toChart?applyCorrections([toChart[0]/0.9,toChart[1]/0.9],"takeoff",hw,perfGrass):null;
-  const ldFull=applyCorrections(ldChart,"landing",hw,perfGrass);
+  const ldShort=applyCorrections(ldChart,"landing",hw,perfGrass);                                    // flaps full (30°)
+  const LDG20=1+0.35*((30-20)/30);   // flaps 20° landing factor vs full-flap chart (+11.7%)
+  const ldNormal=ldChart?applyCorrections([ldChart[0]*LDG20,ldChart[1]*LDG20],"landing",hw,perfGrass):null; // "normal" landing = flaps 20°
   const gph=num("pf_gph"), gs=num("pf_gs"), taxi=num("pf_taxi");
   const tripFuel=tripFuelGal();
   const altd=num("pf_altd"), altFuel=(gs>0)?gph*altd/gs:0;
@@ -1064,7 +1354,7 @@ function perfSnapshot(){
   const resFuel=gph*45/60, total=taxi+tripFuel+contFuel+altFuel+resFuel;
   const onboard=num("pf_onboard"), extra=onboard-total;
   const gh=num("pf_glidealt"), glide=gh>0?gh*0.0015:0;   /* 1.5 nm per 1000 ft (best glide 68 KIAS) */
-  return {elev,oat,qnh,pa,da,hw,xw,wspd,wt,toShort,toNormal,ldFull,gph,gs,taxi,tripFuel,contFuel,resFuel,altFuel,total,onboard,extra,gh,glide,landing:landingState(wbW,wbM)};
+  return {elev,oat,qnh,pa,da,hw,xw,wspd,wt,toShort,toNormal,ldShort,ldNormal,gph,gs,taxi,tripFuel,contFuel,resFuel,altFuel,total,onboard,extra,gh,glide,landing:landingState(wbW,wbM)};
 }
 /* perf form box positions [xLeft%, yCenter%] (measured from perf-form.jpg) */
 const P2={ date:[38.5,10.34],reg:[74.8,10.34], toN:[38.5,13.06],toS:[74.8,13.06], ldN:[38.5,15.80],ldS:[74.8,15.80],
@@ -1078,7 +1368,7 @@ function pfComputePerf(){
   const dist=v=> v?`${fmt(Math.round(v[0]/5)*5,0)} / ${fmt(Math.round(v[1]/5)*5,0)} ft`:"";
   const distsOK = d.wt>0 && (hasVal("pf_elev")||hasVal("pf_qnh")||hasVal("pf_oat"));
   P(V("m_date"),P2.date); P(V("m_reg"),P2.reg);
-  if(distsOK){ P(dist(d.toNormal),P2.toN); P(dist(d.toShort),P2.toS); P(dist(d.ldFull),P2.ldN); P(dist(d.ldFull),P2.ldS); }
+  if(distsOK){ P(dist(d.toNormal),P2.toN); P(dist(d.toShort),P2.toS); P(dist(d.ldNormal),P2.ldN); P(dist(d.ldShort),P2.ldS); }
   if(d.wt>0) P(fmt(d.wt,0)+" lb",P2.toW);
   if(d.landing) P(fmt(d.landing.w,0)+" lb",P2.ldW);
   if(d.onboard>0) P(fmt(d.onboard,1)+" gal  ·  "+fmt(d.onboard*6,0)+" lb",P2.fOB1);
@@ -1169,11 +1459,14 @@ buildRegOptions(); buildStations();
 document.getElementById("m_date").valueAsDate=new Date();
 loadState();
 loadPerf();
+loadNav();
 document.querySelectorAll("#page-perf input").forEach(i=>i.addEventListener("input",()=>{ calcPerf(); savePerf(); }));
+NAV_FIELDS.concat(NAV_GLOB,["nl_fcap_in"]).forEach(id=>{ const e=document.getElementById(id); if(e) e.addEventListener("input",()=>{ navCalc(); saveNav(); }); });
 if(!(document.fullscreenEnabled||document.webkitFullscreenEnabled)){ const b=document.getElementById("fsbtn"); if(b) b.style.display="none"; }
 updatePerfTypeButtons();
 recalc();
-try{ if(localStorage.getItem("c172tab")==="perf") setTab("perf"); }catch(e){}
+navCalc();
+try{ const tb=localStorage.getItem("c172tab"); if(tb==="perf"||tb==="nav") setTab(tb); }catch(e){}
 
 /* PWA service worker */
 if("serviceWorker" in navigator){
