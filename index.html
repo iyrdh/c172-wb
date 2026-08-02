@@ -125,15 +125,12 @@
   .wts{ display:flex; flex-direction:column; gap:8px; }
   .wts .wrow{ display:flex; align-items:center; gap:10px; background:var(--field);
         border:1px solid var(--line); border-radius:11px; padding:10px 12px; }
-  .wts .wrow.to{ background:#fff; border:2px solid var(--navy); }
   .wts .wrow .lab{ flex:1; min-width:0; }
   .wts .wrow .lab b{ display:block; font-size:14px; font-weight:700; color:var(--ink); }
   .wts .wrow .lab small{ display:block; font-size:11px; color:var(--muted); }
-  .wts .wrow.to .lab b{ color:var(--navy); }
   .wts .wrow .num{ flex:none; text-align:right; }
   .wts .wrow .num .w{ font-size:19px; font-weight:800; color:var(--ink); line-height:1.1; }
   .wts .wrow .num .w small{ font-size:11px; font-weight:600; color:var(--muted); }
-  .wts .wrow.to .num .w{ color:var(--navy); font-size:21px; }
   .wts .wrow .num .cg{ font-size:11.5px; color:var(--muted); }
   .wts .wrow .dot{ flex:none; width:11px; height:11px; border-radius:50%; background:#cbd2df; }
   .wts .wrow .dot.ok{ background:var(--good); } .wts .wrow .dot.bad{ background:var(--bad); }
@@ -358,7 +355,7 @@
       <div class="wrow"><div class="lab"><b>Ramp weight</b><small>as loaded, before taxi</small></div>
         <div class="num"><div class="w"><span id="w_ramp">—</span> <small>lb</small></div><div class="cg">C.G. <span id="cg_ramp">—</span>″</div></div>
         <span class="dot" id="dot_ramp"></span></div>
-      <div class="wrow to"><div class="lab"><b>Takeoff weight</b><small id="to_sub">− taxi fuel (Performance)</small></div>
+      <div class="wrow"><div class="lab"><b>Takeoff weight</b><small id="to_sub">− taxi fuel (Performance)</small></div>
         <div class="num"><div class="w"><span id="w_to">—</span> <small>lb</small></div><div class="cg">C.G. <span id="cg_to">—</span>″</div></div>
         <span class="dot" id="dot_to"></span></div>
       <div class="wrow"><div class="lab"><b>Landing weight</b><small id="ld_sub">− trip fuel (Performance)</small></div>
