@@ -1,5 +1,5 @@
 /* C-172 W&B service worker — offline app shell cache */
-const CACHE = "c172wb-v38";
+const CACHE = "c172wb-v45";
 const ASSETS = [
   "./",
   "./index.html",
