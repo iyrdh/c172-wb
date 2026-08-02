@@ -132,11 +132,21 @@
         background:#fff; color:var(--navy); font-weight:700; font-size:14px; font-family:inherit; }
   .actions button.primary{ background:var(--navy); color:#fff; }
   .foot{ font-size:11px; color:var(--muted); margin:8px 12px 4px; line-height:1.4; }
-  details.flight summary{ cursor:pointer; font-size:12px; font-weight:700; color:var(--muted);
-        text-transform:uppercase; letter-spacing:.6px; list-style:none; }
+  /* "Flight details" — styled as an obvious tappable button */
+  details.flight{ margin:2px 0 10px; }
+  details.flight summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px;
+        font-size:14px; font-weight:700; color:var(--navy); font-family:inherit;
+        background:#eef1f6; border:1px solid #c4ccdb; border-radius:10px; padding:12px 14px; }
+  details.flight summary:hover{ background:#e3e8f1; border-color:var(--navy); }
   details.flight summary::-webkit-details-marker{ display:none; }
-  details.flight summary::after{ content:" ▸"; }
-  details.flight[open] summary::after{ content:" ▾"; }
+  details.flight summary::before{ content:"✚"; font-size:13px; color:var(--navy); font-weight:800; }
+  details.flight[open] summary::before{ content:"−"; font-size:17px; line-height:1; }
+  details.flight summary .hint{ margin-left:auto; font-size:11.5px; font-weight:600; color:var(--muted); }
+  details.flight[open] summary{ background:var(--navy); border-color:var(--navy); color:#fff;
+        border-radius:10px 10px 0 0; }
+  details.flight[open] summary::before{ color:#fff; }
+  details.flight[open] summary .hint{ color:#c8d2ea; }
+  details.flight .fbody{ border:1px solid #c4ccdb; border-top:none; border-radius:0 0 10px 10px; padding:12px 12px 2px; }
 
   /* ---- Wide screens / iPad landscape: two columns, no scrolling ---- */
   @media (min-width:820px){
@@ -296,12 +306,14 @@
       </div>
     </div>
     <details class="flight">
-      <summary>Flight details</summary>
-      <div class="grid2" style="margin-top:10px;">
-        <div class="field"><label class="fld">Date</label><input type="date" id="m_date"></div>
-        <div class="field"><label class="fld">Sortie No</label><input type="text" id="m_sortie"></div>
+      <summary>Flight details<span class="hint">date · sortie · mission</span></summary>
+      <div class="fbody">
+        <div class="grid2">
+          <div class="field"><label class="fld">Date</label><input type="date" id="m_date"></div>
+          <div class="field"><label class="fld">Sortie No</label><input type="text" id="m_sortie"></div>
+        </div>
+        <div class="field"><label class="fld">Mission No</label><input type="text" id="m_mission"></div>
       </div>
-      <div class="field"><label class="fld">Mission No</label><input type="text" id="m_mission"></div>
     </details>
   </section>
 
@@ -520,7 +532,7 @@
 <script>
 /* ---------- Aircraft empty weights & arms ---------- */
 const AIRCRAFT = {
-  "HS-BAI": { type:"C172R", normal:{w:1678,   arm:40.61} },
+  "HS-BAI": { type:"C172R", hp:180, normal:{w:1678,   arm:40.61} },   /* C172R airframe, 180 HP engine */
   "HS-BAO": { type:"C172R", normal:{w:1701.5, arm:41.08} },
   "HS-BAP": { normal:{w:1705,   arm:40.79}, utility:{w:1605,   arm:39.73} },
   "HS-BCB": { normal:{w:1636.5, arm:38.5 } },
@@ -529,7 +541,7 @@ const AIRCRAFT = {
   "HS-BCG": { normal:{w:1625,   arm:41.1 } },
   "HS-BCI": { normal:{w:1622,   arm:37.97} },
   "HS-BCJ": { normal:{w:1671,   arm:39.56} },
-  "HS-BCK": { normal:{w:1713,   arm:41.96}, utility:{w:1656.5, arm:42.21} },
+  "HS-BCK": { normal:{w:1700.6, arm:41.11}, utility:{w:1637.16,arm:39.88} },
   "HS-BCO": { normal:{w:1694.5, arm:41.17}, utility:{w:1639.5, arm:39.47} },
   "HS-BCP": { normal:{w:1689,   arm:40.76} },
   "HS-BCQ": { normal:{w:1712,   arm:41.79} },
@@ -537,7 +549,7 @@ const AIRCRAFT = {
   "HS-BCT": { normal:{w:1722,   arm:40.92} },
   "HS-BCU": { normal:{w:1744.5, arm:41.64}, utility:{w:1727,   arm:40.35} },
   "HS-BCW": { normal:{w:1677,   arm:40.04} },
-  "HS-BCX": { normal:{w:1759,   arm:42.29} },
+  "HS-BCX": { normal:{w:1739,   arm:42.29} },
   "HS-BSR": { normal:{w:1690,   arm:41.2 } },
   "HS-BSS": { normal:{w:1692.5, arm:41.29} },
   "HS-BSU": { normal:{w:1699.5, arm:40.43} },
@@ -620,7 +632,7 @@ function onRegChange(){
   const reg=document.getElementById("m_reg").value, ac=AIRCRAFT[reg];
   currentType=(ac&&ac.type)?ac.type:"C172S";
   document.getElementById("chipType").textContent="Type "+currentType.replace("C172","C-172");
-  document.getElementById("chipHp").textContent=spec().hp+" HP";
+  document.getElementById("chipHp").textContent=((ac&&ac.hp)?ac.hp:spec().hp)+" HP";   /* per-aircraft HP override */
   perfType=currentType; updatePerfTypeButtons();
   const hasUtil=ac&&ac.utility;
   document.getElementById("btnUtility").disabled=!hasUtil;
